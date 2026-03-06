@@ -1,0 +1,325 @@
+{# app/templates/purchase/grn.html #}
+{% extends "base.html" %}
+{% set title = "รับสินค้า (GRN)" %}
+{% block content %}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <div>
+    <h3 class="mb-0">รับสินค้า (GRN)</h3>
+    <div class="text-muted small">รับจาก PO หรือรับสดไม่มี PO · ทำงานจบในหน้าเดียว</div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary" href="{{ url_for('pages.po_page') }}">
+      <i class="bi bi-file-earmark-text me-1"></i>ไปหน้า PO
+    </a>
+    <button class="btn btn-primary" type="button" onclick="openGrnModal(null)">
+      <i class="bi bi-plus-circle me-1"></i>รับสินค้าใหม่
+    </button>
+  </div>
+</div>
+
+<div class="card app-card shadow-sm mb-3">
+  <div class="card-body">
+    <form class="row g-2 align-items-end" method="get" action="{{ url_for('pages.grn_page') }}">
+      <div class="col-md-6 col-lg-5">
+        <label class="form-label mb-1">ค้นหา</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input
+            type="text"
+            class="form-control"
+            name="q"
+            placeholder="ค้นหาเลข GRN / Supplier"
+            value="{{ q or '' }}"
+          />
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label mb-1">เจ้าหนี้</label>
+        <select class="form-select js-search" name="supplier_id">
+          <option value="">-- เจ้าหนี้ทั้งหมด --</option>
+          {% for s in suppliers %}
+            <option value="{{ s.id }}" {{ supplier_id==s.id and "selected" }}>{{ s.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-3 col-lg-2 d-grid">
+        <button class="btn btn-outline-primary" type="submit">
+          <i class="bi bi-funnel me-1"></i>กรอง/ค้นหา
+        </button>
+      </div>
+
+      <div class="col-md-12 col-lg-2 d-grid">
+        <a class="btn btn-outline-secondary" href="{{ url_for('pages.grn_page') }}">
+          <i class="bi bi-x-circle me-1"></i>ล้าง
+        </a>
+      </div>
+    </form>
+
+    <div class="text-muted small mt-2">
+      โหมด “รับจาก PO” จะแสดงเฉพาะ PO ที่สถานะ
+      <span class="badge text-bg-success">อนุมัติ</span>
+      หรือ
+      <span class="badge text-bg-warning">รับบางส่วน</span>
+    </div>
+  </div>
+</div>
+
+<div class="card app-card shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th style="width: 140px;">วันที่</th>
+            <th style="width: 180px;">เลข GRN</th>
+            <th>เจ้าหนี้</th>
+            <th style="width: 180px;">อ้างอิง PO</th>
+            <th class="text-end" style="width: 120px;">จำนวนรายการ</th>
+            <th class="text-end" style="width: 190px;">การทำงาน</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if rows and rows|length > 0 %}
+            {% for g in rows %}
+              <tr>
+                <td class="text-muted">{{ g.grn_date }}</td>
+                <td><span class="fw-semibold">{{ g.grn_no }}</span></td>
+                <td>{{ g.supplier.name if g.supplier else "-" }}</td>
+                <td class="text-muted">{{ g.po.po_no if g.po else "-" }}</td>
+                <td class="text-end">{{ (g.lines|length) if g.lines else 0 }}</td>
+                <td class="text-end">
+                  <button class="btn btn-sm btn-outline-primary" type="button" onclick="openGrnModal({{ g.id }})">
+                    <i class="bi bi-pencil-square me-1"></i>ดู/แก้ไข
+                  </button>
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="6" class="text-center text-muted py-4">ยังไม่มีรายการรับสินค้า (GRN)</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- =========================================================
+     MODAL: GRN
+     ========================================================= -->
+<div class="modal fade" id="modalGRN" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="bi bi-box-arrow-in-down me-2"></i>
+          <span id="grn_title">สร้าง GRN</span>
+        </h5>
+        <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body">
+        <input type="hidden" id="grn_id" value="">
+
+        <div class="card border-0 bg-light-subtle mb-3">
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-3">
+                <label class="form-label">วันที่ GRN</label>
+                <input type="date" class="form-control" id="grn_date" value="{{ today.isoformat() if today else '' }}">
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label d-flex justify-content-between align-items-center">
+                  <span>เจ้าหนี้ (Supplier) *</span>
+                  <button class="btn btn-sm btn-outline-secondary" type="button" onclick="openSupplierModal(null, 'grn_supplier_id')">
+                    <i class="bi bi-plus"></i> เพิ่ม
+                  </button>
+                </label>
+                <select class="form-select js-search" id="grn_supplier_id" required>
+                  <option value="">-- เลือกเจ้าหนี้ --</option>
+                  {% for s in suppliers %}
+                    <option value="{{ s.id }}">{{ s.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div class="col-md-5">
+                <label class="form-label">โหมดรับสินค้า</label>
+
+                <div class="d-flex flex-wrap align-items-center gap-3 mb-2">
+                  <div class="form-check">
+                    <input class="form-check-input" type="radio" name="grn_mode_radio" id="grnModeCash" value="cash"
+                      onclick="qs('grn_mode').value='cash'; grnModeChanged();">
+                    <label class="form-check-label" for="grnModeCash">รับสด (ไม่มี PO)</label>
+                  </div>
+
+                  <div class="form-check">
+                    <input class="form-check-input" type="radio" name="grn_mode_radio" id="grnModePO" value="po" checked
+                      onclick="qs('grn_mode').value='po'; grnModeChanged();">
+                    <label class="form-check-label" for="grnModePO">รับจาก PO</label>
+                  </div>
+
+                  <input type="hidden" id="grn_mode" value="po">
+                </div>
+
+                <div id="grn_po_wrap">
+                  <select class="form-select js-search" id="grn_po_id" onchange="prefillGrnFromPO()">
+                    <option value="">-- เลือก PO (เฉพาะรับจาก PO) --</option>
+                    {% for po in pos %}
+                      <option value="{{ po.id }}">{{ po.po_no }} · {{ po.supplier.name }}</option>
+                    {% endfor %}
+                  </select>
+                  <div class="text-muted small mt-1">
+                    เลือก PO แล้วระบบจะดึงรายการมาเติมให้อัตโนมัติ
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-3">
+              <label class="form-label">หมายเหตุ</label>
+              <input type="text" class="form-control" id="grn_remark" placeholder="ระบุหมายเหตุ (ถ้ามี)">
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div>
+            <div class="fw-semibold">รายการรับเข้า</div>
+            <div class="text-muted small">เพิ่ม/ลบแถวได้ · ถ้ามาจาก PO ระบบจะเติมรายการให้เอง</div>
+          </div>
+          <button class="btn btn-sm btn-outline-primary" type="button" onclick="grnAddRow({})">
+            <i class="bi bi-plus-circle me-1"></i>เพิ่มแถว
+          </button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0" id="grn_lines_tbl">
+            <thead class="table-light">
+              <tr>
+                <th style="width: 34%;">ชื่อรายการ</th>
+                <th style="width: 18%;">หมวดหมู่</th>
+                <th style="width: 16%;">หน่วย</th>
+                <th class="text-end" style="width: 12%;">จำนวนรับ</th>
+                <th class="text-end" style="width: 12%;">ต้นทุน/หน่วย</th>
+                <th class="text-end" style="width: 8%;">ลบ</th>
+              </tr>
+            </thead>
+            <tbody id="grn_lines_body">
+              <!-- rows injected by app.js -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="text-danger small mt-2" id="grn_err"></div>
+
+        <div class="alert alert-info small mb-0 mt-3">
+          <div class="fw-semibold">หมายเหตุ (Phase นี้)</div>
+          <ul class="mb-0">
+            <li>บันทึก GRN แล้วระบบจะสร้าง StockMove ประเภท GRN</li>
+            <li>ถ้าต้องการ Generate Assets จากจำนวนรับ ให้กด “Generate Assets” หลังจากบันทึก GRN</li>
+          </ul>
+        </div>
+
+        <div class="mt-3" id="gen_assets_wrap" style="display:none;">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="fw-semibold">Generate Assets จากจำนวนรับ</div>
+            <div class="d-flex gap-2">
+              <button class="btn btn-sm btn-outline-secondary" type="button" onclick="qs('gen_assets_wrap').style.display='none'">ซ่อน</button>
+              <button class="btn btn-sm btn-primary" type="button" onclick="submitGenerateAssets()">
+                <i class="bi bi-magic me-1"></i>สร้างอุปกรณ์
+              </button>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th style="width: 18%;">รหัสอุปกรณ์</th>
+                  <th>ชื่อ</th>
+                  <th style="width: 16%;">ยี่ห้อ</th>
+                  <th style="width: 16%;">หน่วย</th>
+                  <th class="text-end" style="width: 14%;">ต้นทุน</th>
+                </tr>
+              </thead>
+              <tbody id="gen_assets_body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <div class="me-auto">
+          <span class="text-secondary small" id="grn_no_hint"></span>
+        </div>
+        <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">ปิด</button>
+        <button class="btn btn-outline-primary" type="button" onclick="prepareGenerateAssets()">
+          <i class="bi bi-stars me-1"></i>Generate Assets
+        </button>
+        <button class="btn btn-primary" type="button" onclick="saveGRN()">
+          <i class="bi bi-save me-1"></i>บันทึก GRN
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+{% include "partials/master_modals.html" %}
+
+<style>
+  #modalGRN .choices,
+  #modalGRN .choices__inner {
+    width: 100%;
+  }
+
+  #modalGRN .choices__inner {
+    min-height: calc(1.5em + .75rem + 2px);
+    padding: .375rem .75rem;
+    border-radius: .375rem;
+  }
+
+  #modalGRN .choices__list--dropdown,
+  #modalGRN .choices__list[aria-expanded] {
+    z-index: 2000;
+  }
+
+  #grn_lines_tbl th {
+    white-space: nowrap;
+  }
+</style>
+
+<script>
+(function(){
+  function initSearchInModal() {
+    const modalEl = document.getElementById("modalGRN");
+    if (!modalEl) return;
+
+    if (typeof window.initSearchSelects === "function") {
+      window.initSearchSelects(modalEl);
+    } else if (typeof window.initChoices === "function") {
+      window.initChoices(modalEl);
+    } else if (typeof window.initSearchableSelects === "function") {
+      window.initSearchableSelects(modalEl);
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const modalEl = document.getElementById("modalGRN");
+    if (!modalEl) return;
+
+    modalEl.addEventListener("shown.bs.modal", () => {
+      initSearchInModal();
+    });
+  });
+})();
+</script>
+{% endblock %}

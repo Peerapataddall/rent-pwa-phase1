@@ -1,0 +1,106 @@
+<!-- app/templates/quotes/installments.html -->
+{% extends "base.html" %}
+{% set title = "งวด (จาก QT)" %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <div>
+    <h4 class="mb-0">งวด</h4>
+    <div class="text-secondary">
+      QT: <a href="{{ url_for('pages.quote_view', quote_id=q.id) }}">{{ q.doc_no }}</a>
+      · CT: <a href="{{ url_for('pages.contract_view', contract_id=c.id) }}">{{ c.doc_no }}</a>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary" href="{{ url_for('pages.quote_view', quote_id=q.id) }}">
+      <i class="bi bi-arrow-left me-1"></i>กลับไป QT
+    </a>
+    <a class="btn btn-outline-primary" href="{{ url_for('pages.contract_view', contract_id=c.id) }}#installments">
+      <i class="bi bi-box-arrow-up-right me-1"></i>ไปหน้าสัญญา (CT)
+    </a>
+  </div>
+</div>
+
+<div class="card app-card shadow-sm">
+  <div class="card-body">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+      <div>
+        <div class="fw-semibold">สรุป</div>
+        <div class="small text-secondary">
+          จำนวนงวด: {{ c.installments|length }} · ยอดชำระสุทธิ (จาก QT): {{ "{:,.2f}".format(q.net_payable or 0) }}
+        </div>
+      </div>
+      <div class="small text-secondary">
+        * สร้าง/แก้ไขงวด ทำที่หน้า CT (ปุ่ม “สร้างงวดอัตโนมัติ”)
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th style="width:90px">งวด</th>
+            <th style="width:140px">กำหนดชำระ</th>
+            <th class="text-end" style="width:160px">ยอดงวด</th>
+            <th style="width:140px">สถานะ</th>
+            <th class="text-end" style="width:260px">เอกสาร</th>
+            <th class="text-end" style="width:140px">จัดการ</th>
+          </tr>
+        </thead>
+        <tbody>
+
+          {% for ins in c.installments %}
+            <tr>
+              <td class="fw-semibold">{{ ins.seq }}</td>
+              <td>{{ ins.due_date.strftime('%d/%m/%Y') if ins.due_date else '-' }}</td>
+              <td class="text-end fw-semibold">{{ "{:,.2f}".format(ins.amount or 0) }}</td>
+              <td>
+                {% if ins.status == "ชำระแล้ว" %}
+                  <span class="badge bg-success">ชำระแล้ว</span>
+                {% else %}
+                  <span class="badge bg-secondary">ยังไม่ชำระ</span>
+                {% endif %}
+              </td>
+
+              <td class="text-end">
+                {% if ins.billing %}
+                  <a class="btn btn-sm btn-outline-dark" href="{{ url_for('pages.billing_view', billing_id=ins.billing.id) }}">BL</a>
+                {% else %}
+                  <span class="badge text-bg-light border">BL-</span>
+                {% endif %}
+
+                {% if ins.tax_invoice %}
+                  <a class="btn btn-sm btn-outline-dark" href="{{ url_for('pages.tax_view', tax_id=ins.tax_invoice.id) }}">TAX</a>
+                {% else %}
+                  <span class="badge text-bg-light border">TAX-</span>
+                {% endif %}
+
+                {% if ins.receipt %}
+                  <a class="btn btn-sm btn-outline-dark" href="{{ url_for('pages.receipt_view', receipt_id=ins.receipt.id) }}">RC</a>
+                {% else %}
+                  <span class="badge text-bg-light border">RC-</span>
+                {% endif %}
+              </td>
+
+              <td class="text-end">
+                <a class="btn btn-sm btn-outline-primary" href="{{ url_for('pages.installment_view', inst_id=ins.id) }}">
+                  <i class="bi bi-eye me-1"></i>ดู
+                </a>
+              </td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="6" class="text-center text-secondary py-4">
+                ยังไม่มีงวด (ไปหน้า CT แล้วกด “สร้างงวดอัตโนมัติ”)
+              </td>
+            </tr>
+          {% endfor %}
+
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

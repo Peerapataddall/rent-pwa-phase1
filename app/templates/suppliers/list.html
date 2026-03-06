@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% set title = "แฟ้มเจ้าหนี้" %}
+{% block content %}
+
+<div class="card app-card shadow-sm mb-3">
+  <div class="card-body">
+    <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+      <div>
+        <h4 class="mb-0"><i class="bi bi-building me-2"></i>แฟ้มเจ้าหนี้ (Suppliers)</h4>
+        <div class="text-secondary small">ค้นหา + เพิ่ม/แก้ไขแบบ Modal (ไม่พาไปหลายหน้า)</div>
+      </div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-primary" onclick="openSupplierModal(null, null)">
+          <i class="bi bi-plus-lg me-1"></i> เพิ่มเจ้าหนี้
+        </button>
+      </div>
+    </div>
+
+    <hr class="my-3">
+
+    <form class="row g-2 align-items-end" method="get">
+      <div class="col-12 col-md-6">
+        <label class="form-label mb-1">ค้นหา</label>
+        <input class="form-control" name="q" value="{{ q }}" placeholder="ชื่อ / เบอร์ / เลขภาษี">
+      </div>
+      <div class="col-12 col-md-3">
+        <label class="form-label mb-1">สถานะ</label>
+        <select class="form-select" name="status">
+          <option value="" {{ ""==status and "selected" }}>ทั้งหมด</option>
+          <option value="active" {{ "active"==status and "selected" }}>ใช้งาน</option>
+          <option value="inactive" {{ "inactive"==status and "selected" }}>ปิดใช้งาน</option>
+        </select>
+      </div>
+      <div class="col-12 col-md-3 d-flex gap-2">
+        <button class="btn btn-outline-primary w-100"><i class="bi bi-search me-1"></i>ค้นหา</button>
+        <a class="btn btn-outline-secondary w-100" href="{{ url_for('pages.supplier_list') }}"><i class="bi bi-x-circle me-1"></i>ล้าง</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card app-card shadow-sm">
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-sm align-middle">
+        <thead class="table-light">
+          <tr>
+            <th style="width: 80px;">#</th>
+            <th>ชื่อเจ้าหนี้</th>
+            <th style="width: 140px;">โทร</th>
+            <th style="width: 150px;">เลขภาษี</th>
+            <th style="width: 120px;">เครดิต(วัน)</th>
+            <th style="width: 140px;">วงเงิน</th>
+            <th style="width: 110px;">สถานะ</th>
+            <th style="width: 110px;" class="text-end">จัดการ</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in rows %}
+          <tr>
+            <td class="text-muted">#{{ s.id }}</td>
+            <td>
+              <div class="fw-semibold">{{ s.name }}</div>
+              <div class="text-secondary small">{{ s.email or "-" }}</div>
+            </td>
+            <td>{{ s.phone or "-" }}</td>
+            <td>{{ s.tax_id or "-" }}</td>
+            <td>{{ s.credit_days or 0 }}</td>
+            <td>{{ "{:,.2f}".format(s.credit_limit or 0) }}</td>
+            <td>
+              {% if s.is_active %}
+                <span class="badge text-bg-success">ใช้งาน</span>
+              {% else %}
+                <span class="badge text-bg-secondary">ปิด</span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-outline-primary" onclick="openSupplierModal({{ s.id }}, null)">
+                <i class="bi bi-pencil-square"></i>
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+          {% if rows|length == 0 %}
+          <tr>
+            <td colspan="8" class="text-center text-secondary py-4">ยังไม่มีข้อมูล</td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% include "partials/master_modals.html" %}
+{% endblock %}

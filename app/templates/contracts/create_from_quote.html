@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% set title = "สร้างสัญญาเช่า" %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <div>
+    <h4 class="mb-0">สร้างสัญญาเช่า</h4>
+    <div class="text-secondary small">
+      จากใบเสนอราคา: <span class="fw-semibold">{{ q.doc_no }}</span>
+    </div>
+  </div>
+
+  <a class="btn btn-outline-secondary" href="{{ url_for('pages.quote_view', quote_id=q.id) }}">
+    <i class="bi bi-arrow-left me-1"></i>กลับ
+  </a>
+</div>
+
+<div class="card app-card shadow-sm">
+  <div class="card-body">
+
+    <div class="row g-3">
+      <div class="col-md-6">
+        <div class="fw-semibold">ลูกค้า</div>
+        <div class="text-secondary">{{ q.customer.name }}</div>
+      </div>
+      <div class="col-md-6">
+        <div class="fw-semibold">พื้นที่โครงการ</div>
+        <div class="text-secondary">{{ q.project_site or '-' }}</div>
+      </div>
+      <div class="col-md-6">
+        <div class="fw-semibold">วันที่เช่า</div>
+        <div class="text-secondary">
+          {{ q.rent_start.strftime('%d/%m/%Y') if q.rent_start else '-' }}
+          ถึง
+          {{ q.rent_end.strftime('%d/%m/%Y') if q.rent_end else '-' }}
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="fw-semibold">ยอดชำระสุทธิ (จาก QT)</div>
+        <div class="text-primary fw-bold">{{ "{:,.2f}".format(q.net_payable or 0) }}</div>
+      </div>
+    </div>
+
+    <hr>
+
+    <form method="post" action="{{ url_for('pages.contract_create_from_quote', quote_id=q.id) }}">
+      <button class="btn btn-primary" type="submit">
+        <i class="bi bi-file-earmark-text me-1"></i> สร้างสัญญาเช่า
+      </button>
+      <div class="small text-secondary mt-2">
+        หมายเหตุ: QT 1 ใบ “อาจมีหรือไม่มี” สัญญาเช่าก็ได้ (ตามสเปค) · ถ้าสร้างแล้วจะผูก 1:1 (สัญญา 1 ใบต่อ QT 1 ใบ)
+      </div>
+    </form>
+
+  </div>
+</div>
+
+{% endblock %}

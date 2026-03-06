@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% set title = "Stock · ปรับสต็อก" %}
+{% block content %}
+
+<div class="card app-card shadow-sm mb-3">
+  <div class="card-body">
+    <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+      <div>
+        <h4 class="mb-0"><i class="bi bi-wrench-adjustable-circle me-2"></i>Stock · ปรับสต็อก (Adjust)</h4>
+        <div class="text-secondary small">เลือกอุปกรณ์รายตัว → เปลี่ยนสถานะ + บันทึก StockMove (Inventory Ledger)</div>
+      </div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-primary" onclick="openAdjustModal()">
+          <i class="bi bi-check2-square me-1"></i> ปรับรายการที่เลือก
+        </button>
+      </div>
+    </div>
+
+    <hr class="my-3">
+
+    <form class="row g-2 align-items-end" method="get">
+      <div class="col-12 col-md-5">
+        <label class="form-label mb-1">ค้นหา</label>
+        <input class="form-control" name="q" value="{{ q }}" placeholder="รหัส / ชื่อ / หมวด">
+      </div>
+      <div class="col-6 col-md-3">
+        <label class="form-label mb-1">หมวด</label>
+        <select class="form-select" name="category_id">
+          <option value="">ทั้งหมด</option>
+          {% for c in categories %}
+            <option value="{{ c.id }}" {{ category_id==c.id and "selected" }}>{{ c.code }} · {{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label mb-1">สถานะ</label>
+        <select class="form-select" name="status">
+          <option value="" {{ ""==status and "selected" }}>ทั้งหมด</option>
+          {% for s in asset_statuses_th %}
+            <option value="{{ s }}" {{ s==status and "selected" }}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12 col-md-2 d-flex gap-2">
+        <button class="btn btn-outline-primary w-100"><i class="bi bi-search me-1"></i>ค้นหา</button>
+        <a class="btn btn-outline-secondary w-100" href="{{ url_for('pages.stock_adjust_page') }}"><i class="bi bi-x-circle me-1"></i>ล้าง</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card app-card shadow-sm">
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-sm align-middle">
+        <thead class="table-light">
+          <tr>
+            <th style="width:44px;">
+              <input class="form-check-input" type="checkbox" onclick="toggleAllAdjust(this)">
+            </th>
+            <th style="width:140px;">รหัส</th>
+            <th>ชื่อ</th>
+            <th style="width:180px;">หมวด</th>
+            <th style="width:110px;">สถานะ</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in rows %}
+          <tr>
+            <td>
+              <input class="form-check-input adj-check" type="checkbox" value="{{ a.id }}">
+            </td>
+            <td class="fw-semibold">{{ a.asset_code }}</td>
+            <td>{{ a.name }}</td>
+            <td class="text-secondary">
+              <span class="text-uppercase">{{ a.category.code }}</span> · {{ a.category.name }}
+            </td>
+            <td><span class="badge text-bg-light border">{{ a._status_th if a._status_th is defined else a.status }}</span></td>
+          </tr>
+          {% endfor %}
+          {% if rows|length == 0 %}
+          <tr><td colspan="5" class="text-center text-secondary py-4">ไม่พบรายการ</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Adjust Modal -->
+<div class="modal fade" id="modalAdjust" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-wrench-adjustable-circle me-2"></i>ปรับสต็อก</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2 text-secondary small">จะปรับทั้งหมด <span class="fw-semibold" id="adj_count">0</span> รายการ</div>
+
+        <label class="form-label">เหตุผล/สถานะใหม่ *</label>
+        <select class="form-select" id="adj_reason">
+          <option value="ซ่อม">ส่งซ่อม</option>
+          <option value="พร้อมใช้งาน">กลับมาพร้อมใช้งาน</option>
+          <option value="สูญหาย">สูญหาย</option>
+          <option value="จำหน่ายออก">จำหน่ายออก</option>
+        </select>
+
+        <label class="form-label mt-3">หมายเหตุ</label>
+        <textarea class="form-control" id="adj_note" rows="2" placeholder="เช่น ปรับจากการตรวจนับ / แจ้งซ่อม ..."></textarea>
+
+        <div class="text-danger small mt-3" id="adj_err"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+        <button class="btn btn-primary" onclick="submitAdjust()"><i class="bi bi-save me-1"></i>บันทึก</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

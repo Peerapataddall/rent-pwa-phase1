@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% set title = "Report Center" %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <div>
+    <h4 class="mb-0">Report Center</h4>
+    <div class="text-secondary small">
+      สรุปเอกสารทั้งระบบ + Export Excel (QT / CT / BL / TX / RC)
+    </div>
+  </div>
+</div>
+
+<div class="card app-card shadow-sm mb-3">
+  <div class="card-body">
+    <form class="row g-2 align-items-end" method="GET" action="{{ url_for('pages.reports_index') }}">
+
+      <div class="col-md-2">
+        <label class="form-label mb-1">วันที่เริ่ม</label>
+        <input type="date" class="form-control" name="d1" value="{{ request.args.get('d1','') }}">
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label mb-1">วันที่สิ้นสุด</label>
+        <input type="date" class="form-control" name="d2" value="{{ request.args.get('d2','') }}">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label mb-1">ลูกค้า</label>
+        <input type="text" class="form-control" name="customer"
+               value="{{ request.args.get('customer','') }}"
+               placeholder="ชื่อ/รหัส/Tax/โทร">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label mb-1">โครงการ/หน้างาน</label>
+        <input type="text" class="form-control" name="project"
+               value="{{ request.args.get('project','') }}"
+               placeholder="เช่น โครงการจันทบุรี">
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label mb-1">ประเภท</label>
+        {% set tsel = (request.args.get('type','') or '').upper() %}
+        <select class="form-select" name="type">
+          <option value="" {{ 'selected' if tsel=='' else '' }}>ทั้งหมด</option>
+          <option value="QT" {{ 'selected' if tsel=='QT' else '' }}>QT</option>
+          <option value="CT" {{ 'selected' if tsel=='CT' else '' }}>CT</option>
+          <option value="BL" {{ 'selected' if tsel=='BL' else '' }}>BL</option>
+          <option value="TX" {{ 'selected' if tsel=='TX' else '' }}>TX</option>
+          <option value="RC" {{ 'selected' if tsel=='RC' else '' }}>RC</option>
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label mb-1">สถานะ</label>
+        <input type="text" class="form-control" name="status"
+               value="{{ request.args.get('status','') }}"
+               placeholder="เช่น อนุมัติแล้ว / วางบิลแล้ว / รับเงินแล้ว">
+      </div>
+
+      <div class="col-md-5">
+        <label class="form-label mb-1">Keyword (เลขเอกสาร/ข้อความ)</label>
+        <input type="text" class="form-control" name="q"
+               value="{{ request.args.get('q','') }}"
+               placeholder="เช่น QT2603 / BL2603 / ชื่อลูกค้า / ชื่อโครงการ">
+      </div>
+
+      <div class="col-12 d-flex gap-2 mt-2">
+        <button class="btn btn-primary" type="submit">
+          <i class="bi bi-search me-1"></i>ค้นหารายงาน
+        </button>
+
+        <a class="btn btn-outline-secondary" href="{{ url_for('pages.reports_index') }}">
+          <i class="bi bi-x-circle me-1"></i>ล้าง
+        </a>
+
+        <form method="GET" action="{{ url_for('pages.reports_export_xlsx') }}" class="ms-auto">
+          <!-- ส่ง query เดิมไป export -->
+          <input type="hidden" name="d1" value="{{ request.args.get('d1','') }}">
+          <input type="hidden" name="d2" value="{{ request.args.get('d2','') }}">
+          <input type="hidden" name="customer" value="{{ request.args.get('customer','') }}">
+          <input type="hidden" name="project" value="{{ request.args.get('project','') }}">
+          <input type="hidden" name="type" value="{{ request.args.get('type','') }}">
+          <input type="hidden" name="status" value="{{ request.args.get('status','') }}">
+          <input type="hidden" name="q" value="{{ request.args.get('q','') }}">
+          <button class="btn btn-success" type="submit">
+            <i class="bi bi-file-earmark-excel me-1"></i>Export Excel (.xlsx)
+          </button>
+        </form>
+      </div>
+
+      <div class="col-12">
+        <div class="small text-secondary mt-1">
+          * รายการจะรวมเอกสารทุกชนิด และสามารถคลิกเข้าไปดูเอกสารจริงได้
+        </div>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<div class="card app-card shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th style="width:90px;">ประเภท</th>
+          <th style="width:170px;">เลขที่</th>
+          <th style="width:140px;">วันที่</th>
+          <th>ลูกค้า</th>
+          <th>โครงการ/หน้างาน</th>
+          <th style="width:160px;" class="text-end">ยอด</th>
+          <th style="width:160px;">สถานะ</th>
+          <th style="width:120px;" class="text-end">เปิดดู</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows|default([]) %}
+          <tr>
+            <td>
+              {% if r.type == "QT" %}
+                <span class="badge bg-secondary">QT</span>
+              {% elif r.type == "CT" %}
+                <span class="badge bg-primary">CT</span>
+              {% elif r.type == "BL" %}
+                <span class="badge bg-dark">BL</span>
+              {% elif r.type == "TX" %}
+                <span class="badge bg-success">TX</span>
+              {% elif r.type == "RC" %}
+                <span class="badge bg-warning text-dark">RC</span>
+              {% else %}
+                <span class="badge bg-light text-dark">{{ r.type }}</span>
+              {% endif %}
+            </td>
+
+            <td class="fw-semibold">{{ r.doc_no }}</td>
+            <td>{{ r.doc_date.strftime('%d/%m/%Y') if r.doc_date else "-" }}</td>
+            <td class="text-secondary">{{ r.customer_name or "-" }}</td>
+            <td class="text-secondary">{{ r.project_site or "-" }}</td>
+            <td class="text-end">{{ "{:,.2f}".format(r.amount or 0) }}</td>
+            <td>
+              {% if r.status %}
+                <span class="badge bg-light text-dark border">{{ r.status }}</span>
+              {% else %}
+                -
+              {% endif %}
+            </td>
+
+            <td class="text-end">
+              {% if r.view_url %}
+                <a class="btn btn-sm btn-outline-primary" href="{{ r.view_url }}">
+                  <i class="bi bi-eye me-1"></i>View
+                </a>
+              {% else %}
+                -
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="8" class="text-center text-secondary py-4">
+              ยังไม่มีผลลัพธ์รายงาน (กรุณาเลือกเงื่อนไขแล้วกดค้นหา)
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

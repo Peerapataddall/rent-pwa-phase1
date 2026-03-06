@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% set title = "ใบกำกับภาษี" %}
+{% block content %}
+
+{% set _qt = (t.installment.contract.quote if t and t.installment and t.installment.contract else None) %}
+{% set _cust = (_qt.customer if _qt and _qt.customer else None) %}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <div>
+    <h4 class="mb-0">ใบกำกับภาษี</h4>
+    <div class="text-secondary">
+      เลขที่: <span class="fw-semibold">{{ t.doc_no }}</span>
+      · วันที่: {{ t.doc_date.strftime('%d/%m/%Y') }}
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    {% if _cust %}
+      <a class="btn btn-outline-primary"
+         href="{{ url_for('pages.customer_view', customer_id=_cust.id, tab='t2') }}">
+        <i class="bi bi-person-lines-fill me-1"></i>แฟ้มลูกค้า 
+      </a>
+    {% endif %}
+
+    <a class="btn btn-outline-secondary" href="{{ url_for('pages.installment_view', inst_id=t.installment.id) }}">
+      <i class="bi bi-arrow-left me-1"></i>กลับไปงวด
+    </a>
+
+    <a class="btn btn-outline-primary" target="_blank" href="{{ url_for('pages.tax_print', tax_id=t.id) }}">
+      <i class="bi bi-printer me-1"></i>พิมพ์
+    </a>
+
+    <a class="btn btn-primary" href="{{ url_for('pages.tax_pdf', tax_id=t.id) }}">
+      <i class="bi bi-filetype-pdf me-1"></i>PDF
+    </a>
+  </div>
+</div>
+
+<!-- Update Doc Date -->
+<div class="card app-card shadow-sm mb-3">
+  <div class="card-body">
+    <form class="row g-2 align-items-end" method="POST" action="{{ url_for('pages.tax_update_date', tax_id=t.id) }}">
+      <div class="col-auto">
+        <label class="form-label mb-1">วันที่ออกเอกสาร (แก้ไขได้)</label>
+        <input type="date" class="form-control" name="doc_date" value="{{ t.doc_date.isoformat() }}">
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-save me-1"></i>บันทึกวันที่
+        </button>
+      </div>
+      <div class="col-12">
+        <div class="small text-secondary">
+          * ยอดเอกสารจะยึดตาม “ยอดงวด” เสมอ (กันข้อมูลเพี้ยน)
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Content -->
+<div class="card app-card shadow-sm">
+  <div class="card-body">
+
+    <!-- Status + Action -->
+    <div class="mb-3">
+      <div class="fw-semibold">สถานะ</div>
+
+      {% if t.status == "อนุมัติแล้ว" %}
+        <span class="badge bg-success">อนุมัติแล้ว</span>
+        <div class="small text-secondary mt-1">
+          * อนุมัติแล้ว <span class="fw-semibold">ไม่สามารถย้อนกลับได้</span>
+        </div>
+      {% else %}
+        <span class="badge bg-warning text-dark">ยังไม่อนุมัติ</span>
+
+        <form
+          method="POST"
+          action="{{ url_for('pages.tax_approve', tax_id=t.id) }}"
+          style="display:inline;"
+          onsubmit="return confirm('ยืนยันอนุมัติใบกำกับภาษี ?\n* เมื่อบันทึกแล้วจะไม่สามารถย้อนกลับได้');"
+        >
+          <button type="submit" class="btn btn-sm btn-success ms-2">
+            <i class="bi bi-check2-circle me-1"></i>อนุมัติเอกสาร
+          </button>
+        </form>
+
+        <div class="small text-secondary mt-1">
+          * เมื่อกดอนุมัติแล้ว จะไม่สามารถเปลี่ยนกลับได้
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="row g-3">
+      <div class="col-md-6">
+        <div class="fw-semibold">สัญญา</div>
+        <div class="text-secondary">{{ t.installment.contract.doc_no }}</div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="fw-semibold">งวด</div>
+        <div class="text-secondary">งวดที่ {{ t.installment.seq }}</div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="fw-semibold">ยอด</div>
+        <div class="fs-4 fw-bold text-primary">{{ "{:,.2f}".format(t.amount or 0) }}</div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="fw-semibold">อ้างอิง QT</div>
+        <div class="text-secondary">
+          {% if t.installment and t.installment.contract and t.installment.contract.quote %}
+            {{ t.installment.contract.quote.doc_no }}
+          {% else %}
+            -
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

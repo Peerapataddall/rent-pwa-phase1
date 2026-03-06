@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% set title = "แฟ้มลูกค้า" %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <div>
+    <h4 class="mb-0">แฟ้มลูกค้า</h4>
+    <div class="text-secondary small">
+      ค้นหาได้จาก: ชื่อลูกค้า / โทร / Tax ID / อีเมล / ที่อยู่
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#modalCustomer"
+            onclick="prepareCustomerModal('{{ request.full_path }}')">
+      <i class="bi bi-person-plus me-1"></i>เพิ่มลูกค้า
+    </button>
+  </div>
+</div>
+
+<!-- Search -->
+<div class="card app-card shadow-sm mb-3">
+  <div class="card-body">
+    <form class="row g-2 align-items-center" method="GET" action="{{ url_for('pages.customer_list') }}">
+      <div class="col-md-8">
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input
+            type="text"
+            class="form-control"
+            name="q"
+            value="{{ request.args.get('q','') }}"
+            placeholder="ค้นหาลูกค้า: ชื่อ / โทร / Tax ID / อีเมล / ที่อยู่"
+          >
+        </div>
+      </div>
+      <div class="col-md-4 d-flex gap-2">
+        <button class="btn btn-primary" type="submit">
+          <i class="bi bi-search me-1"></i>ค้นหา
+        </button>
+        <a class="btn btn-outline-secondary" href="{{ url_for('pages.customer_list') }}">
+          <i class="bi bi-x-circle me-1"></i>ล้าง
+        </a>
+      </div>
+    </form>
+
+    {% if request.args.get('q') %}
+      <div class="small text-secondary mt-2">
+        ผลการค้นหา: <span class="fw-semibold">{{ request.args.get('q') }}</span>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card app-card shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>ชื่อลูกค้า</th>
+          <th>โทร</th>
+          <th>Tax ID</th>
+          <th>เครดิตเทอม</th>
+          <th>วงเงิน</th>
+          <th class="text-end">ดู</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in rows %}
+          <tr>
+            <td class="fw-semibold">{{ c.name }}</td>
+            <td>{{ c.phone or "-" }}</td>
+            <td>{{ c.tax_id or "-" }}</td>
+            <td>{{ c.credit_days or 0 }} วัน</td>
+            <td>{{ "{:,.2f}".format(c.credit_limit or 0) }}</td>
+            <td class="text-end">
+              <a class="btn btn-sm btn-outline-primary" href="{{ url_for('pages.customer_view', customer_id=c.id) }}">
+                <i class="bi bi-eye me-1"></i>View
+              </a>
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="6" class="text-center text-secondary py-4">
+              {% if request.args.get('q') %}
+                ไม่พบลูกค้าที่ตรงกับคำค้นหา
+              {% else %}
+                ยังไม่มีลูกค้า
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ✅ Reuse modal (ใช้ร่วมกับหน้า Quote/Customer View) -->
+{% include "customers/form_modal.html" %}
+
+{% endblock %}

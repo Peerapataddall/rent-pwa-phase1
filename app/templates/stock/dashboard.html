@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% set title = "Stock · Dashboard" %}
+{% block content %}
+
+<div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
+  <div>
+    <h4 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Stock Dashboard</h4>
+    <div class="text-secondary small">สรุปสถานะอุปกรณ์ + สรุปตามหมวด</div>
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-success" href="{{ url_for('pages.asset_page') }}"><i class="bi bi-tools me-1"></i>ไปหน้าอุปกรณ์</a>
+    <a class="btn btn-outline-success" href="{{ url_for('pages.category_page') }}"><i class="bi bi-tags me-1"></i>ไปหน้าหมวด</a>
+  </div>
+</div>
+
+{% set cards = asset_statuses_th if asset_statuses_th is defined else counts.keys() %}
+<div class="row g-3 mb-3">
+  {% for st in cards %}
+  <div class="col-6 col-md-3 col-lg-2">
+    <div class="card app-card shadow-sm">
+      <div class="card-body">
+        <div class="text-secondary small">{{ st }}</div>
+        <div class="fs-3 fw-bold">{{ counts[st] }}</div>
+        <a class="stretched-link" href="{{ url_for('pages.asset_page', status=st) }}"></a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="card app-card shadow-sm">
+  <div class="card-body">
+    <h5 class="mb-3"><i class="bi bi-bar-chart-line me-2"></i>สรุปตามหมวด</h5>
+
+    <div class="table-responsive">
+      <table class="table table-sm align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>หมวด</th>
+            <th style="width: 90px;" class="text-end">ทั้งหมด</th>
+            <th style="width: 90px;" class="text-end">พร้อมใช้งาน</th>
+            <th style="width: 90px;" class="text-end">จองแล้ว</th>
+            <th style="width: 90px;" class="text-end">กำลังเช่า</th>
+            <th style="width: 90px;" class="text-end">รอตรวจสภาพ</th>
+            <th style="width: 90px;" class="text-end">ซ่อม</th>
+            <th style="width: 90px;" class="text-end">สูญหาย</th>
+            <th style="width: 90px;" class="text-end">จำหน่ายออก</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in cat_rows %}
+          <tr>
+            <td>
+              <a href="{{ url_for('pages.asset_page', category_id=r.cat.id) }}" class="text-decoration-none fw-semibold">
+                <span class="text-uppercase">{{ r.cat.code }}</span> · {{ r.cat.name }}
+              </a>
+            </td>
+            <td class="text-end">{{ r.total }}</td>
+            <td class="text-end">{{ r.available }}</td>
+            <td class="text-end">{{ r.reserved }}</td>
+            <td class="text-end">{{ r.rented }}</td>
+            <td class="text-end">{{ r.inspect }}</td>
+            <td class="text-end">{{ r.repair }}</td>
+            <td class="text-end">{{ r.lost }}</td>
+            <td class="text-end">{{ r.retired }}</td>
+          </tr>
+          {% endfor %}
+          {% if cat_rows|length == 0 %}
+          <tr><td colspan="9" class="text-center text-secondary py-4">ยังไม่มีหมวด</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

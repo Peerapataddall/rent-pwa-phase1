@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+{% set title = "ซื้อ · สั่งซื้อ (PO)" %}
+{% block content %}
+
+<div class="card app-card shadow-sm mb-3">
+  <div class="card-body">
+    <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+      <div>
+        <h4 class="mb-0"><i class="bi bi-cart-check me-2"></i>สั่งซื้อ (Purchase Order)</h4>
+        <div class="text-secondary small">หน้าเดียวจบ · สร้าง/แก้ไข PO แบบ Modal + ตารางรายการ</div>
+      </div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-primary" onclick="openPoModal(null)">
+          <i class="bi bi-plus-lg me-1"></i> สร้าง PO
+        </button>
+      </div>
+    </div>
+
+    <hr class="my-3">
+
+    <form class="row g-2 align-items-end" method="get">
+      <div class="col-12 col-md-5">
+        <label class="form-label mb-1">ค้นหา</label>
+        <input class="form-control" name="q" value="{{ q }}" placeholder="เลข PO / เจ้าหนี้">
+      </div>
+      <div class="col-6 col-md-3">
+        <label class="form-label mb-1">เจ้าหนี้</label>
+        <select class="form-select js-search" name="supplier_id">
+          <option value="">ทั้งหมด</option>
+          {% for s in suppliers %}
+            <option value="{{ s.id }}" {{ supplier_id==s.id and "selected" }}>{{ s.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label mb-1">สถานะ</label>
+        <select class="form-select" name="status">
+          <option value="" {{ ""==status and "selected" }}>ทั้งหมด</option>
+          {% for st in po_statuses_th %}
+            <option value="{{ st }}" {{ st==status and "selected" }}>{{ st }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12 col-md-2 d-flex gap-2">
+        <button class="btn btn-outline-primary w-100"><i class="bi bi-search me-1"></i>ค้นหา</button>
+        <a class="btn btn-outline-secondary w-100" href="{{ url_for('pages.po_page') }}"><i class="bi bi-x-circle me-1"></i>ล้าง</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card app-card shadow-sm">
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-sm align-middle">
+        <thead class="table-light">
+          <tr>
+            <th style="width:140px;">เลขที่</th>
+            <th style="width:120px;">วันที่</th>
+            <th>เจ้าหนี้</th>
+            <th style="width:120px;">สถานะ</th>
+            <th style="width:180px;" class="text-end">จัดการ</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for po in rows %}
+          <tr>
+            <td class="fw-semibold">{{ po.po_no }}</td>
+            <td>{{ po.po_date }}</td>
+            <td>{{ po.supplier.name }}</td>
+            <td>
+              {% set st = po._status_th if po._status_th is defined else (po.status or "") %}
+              {% if st == "ร่าง" %}
+                <span class="badge text-bg-secondary">ร่าง</span>
+              {% elif st == "อนุมัติ" %}
+                <span class="badge text-bg-success">อนุมัติ</span>
+              {% elif st == "รับบางส่วน" %}
+                <span class="badge text-bg-warning">รับบางส่วน</span>
+              {% elif st == "รับครบ" %}
+                <span class="badge text-bg-primary">รับครบ</span>
+              {% else %}
+                <span class="badge text-bg-danger">ยกเลิก</span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-outline-primary" onclick="openPoModal({{ po.id }})">
+                <i class="bi bi-pencil-square me-1"></i>แก้ไข
+              </button>
+
+              <a class="btn btn-sm btn-outline-success" href="{{ url_for('pages.grn_page', mode='po') }}#fromPO={{ po.id }}">
+                <i class="bi bi-box-arrow-in-down me-1"></i>รับสินค้า
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+          {% if rows|length == 0 %}
+          <tr><td colspan="5" class="text-center text-secondary py-4">ยังไม่มี PO</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================================= -->
+<!-- PO Modal -->
+<!-- ========================================================= -->
+<div class="modal fade" id="modalPO" tabindex="-1">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-cart-check me-2"></i><span id="po_title">สร้าง PO</span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <input type="hidden" id="po_id" value="">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">เจ้าหนี้ *</label>
+            <div class="input-group">
+              <select class="form-select js-search" id="po_supplier_id">
+                <option value="">เลือกเจ้าหนี้</option>
+                {% for s in suppliers %}
+                  <option value="{{ s.id }}">{{ s.name }}</option>
+                {% endfor %}
+              </select>
+              <button class="btn btn-outline-secondary" type="button" onclick="openSupplierModal(null, 'po_supplier_id')">+ เพิ่ม</button>
+            </div>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">วันที่</label>
+            <input class="form-control" id="po_date" type="date" value="{{ today }}">
+          </div>
+
+          <div class="col-md-5">
+            <label class="form-label">หมายเหตุ</label>
+            <input class="form-control" id="po_remark" placeholder="เช่น ส่งของ ... / เงื่อนไข ...">
+          </div>
+        </div>
+
+        <hr class="my-3">
+
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div class="fw-semibold">รายการสั่งซื้อ</div>
+          <button class="btn btn-sm btn-outline-primary" type="button" onclick="poAddRow()">
+            <i class="bi bi-plus-lg me-1"></i> เพิ่มแถว
+          </button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-sm align-middle" id="po_lines_tbl">
+            <thead class="table-light">
+              <tr>
+                <th>รายการ</th>
+                <th style="width:280px;">หมวด</th>
+                <th style="width:220px;">หน่วย</th>
+                <th style="width:110px;" class="text-end">จำนวน</th>
+                <th style="width:140px;" class="text-end">ราคา/หน่วย</th>
+                <th style="width:140px;" class="text-end">รวม</th>
+                <th style="width:60px;" class="text-end">ลบ</th>
+              </tr>
+            </thead>
+            <tbody id="po_lines_body">
+              <!-- rows by JS -->
+            </tbody>
+            <tfoot class="table-light">
+              <tr>
+                <td colspan="5" class="text-end fw-semibold">รวมทั้งสิ้น</td>
+                <td class="text-end fw-semibold" id="po_grand_total">0.00</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <div class="text-danger small mt-2" id="po_err"></div>
+        <div class="text-secondary small mt-1">ปุ่ม: บันทึกร่าง / อนุมัติ / ยกเลิก (ทั้งหมดทำใน Modal ไม่สลับหน้า)</div>
+
+      </div>
+
+      <div class="modal-footer">
+        <div class="me-auto">
+          <span class="badge text-bg-light border" id="po_status_badge">ร่าง</span>
+          <span class="text-secondary small ms-2" id="po_no_hint"></span>
+        </div>
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">ปิด</button>
+        <button class="btn btn-outline-primary" onclick="savePO('ร่าง')"><i class="bi bi-save me-1"></i>บันทึกร่าง</button>
+        <button class="btn btn-success" onclick="approvePO()"><i class="bi bi-check2-circle me-1"></i>อนุมัติ</button>
+        <button class="btn btn-danger" onclick="cancelPO()"><i class="bi bi-x-circle me-1"></i>ยกเลิก</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% include "partials/master_modals.html" %}
+
+<style>
+  /* ให้ input-group ของ PO ไม่แตกบรรทัด */
+  #modalPO .input-group {
+    flex-wrap: nowrap;
+    align-items: stretch;
+  }
+
+  /* ให้ choices อยู่ในแถวเดียวกับปุ่ม + */
+  #modalPO .input-group .choices {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin-bottom: 0;
+  }
+
+  /* ปรับความสูงให้ใกล้ Bootstrap form-select */
+  #modalPO .choices__inner {
+    min-height: calc(1.5em + .75rem + 2px);
+    padding: .375rem .75rem;
+    border-radius: .375rem;
+  }
+
+  /* ให้ปุ่ม + ไม่ถูกบีบ */
+  #modalPO .input-group > .btn {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  /* ให้ dropdown ของ choices แสดงเหนือ modal */
+  #modalPO .choices__list--dropdown,
+  #modalPO .choices__list[aria-expanded] {
+    z-index: 2000;
+  }
+
+  /* กันหัวตารางตัดบรรทัด */
+  #po_lines_tbl th {
+    white-space: nowrap;
+  }
+
+  /* กัน select search ในตารางบีบแปลก ๆ */
+  #po_lines_tbl .choices {
+    min-width: 0;
+    width: 100%;
+    margin-bottom: 0;
+  }
+
+  #po_lines_tbl .choices__inner {
+    min-height: calc(1.5em + .75rem + 2px);
+    padding: .25rem .5rem;
+  }
+</style>
+
+<script>
+  (function(){
+    const modalEl = document.getElementById("modalPO");
+    if(!modalEl) return;
+
+    modalEl.addEventListener("shown.bs.modal", () => {
+      if (typeof window.initSearchSelects === "function") {
+        window.initSearchSelects(modalEl);
+      } else if (typeof window.initChoices === "function") {
+        window.initChoices(modalEl);
+      }
+    });
+  })();
+</script>
+
+{% endblock %}

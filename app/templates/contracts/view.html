@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+{% set title = "สัญญาเช่า" %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <div>
+    <h4 class="mb-0">{{ c.doc_no }}</h4>
+    <div class="text-secondary">
+      วันที่: {{ c.doc_date.strftime("%d/%m/%Y") }} · สถานะ:
+
+      {% if c.status == "ยกเลิกสัญญา" %}
+        <span class="badge bg-danger">ยกเลิกสัญญา</span>
+      {% elif c.status == "ปิดสัญญา" %}
+        <span class="badge bg-success">ปิดสัญญา</span>
+      {% else %}
+        <span class="badge bg-primary">สัญญากำลังดำเนินการ</span>
+      {% endif %}
+
+      <span class="text-secondary small">· อ้างอิง QT: <a href="{{ url_for('pages.quote_view', quote_id=q.id) }}">{{ q.doc_no }}</a></span>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary" href="{{ url_for('pages.quote_view', quote_id=q.id) }}">
+      <i class="bi bi-arrow-left me-1"></i>กลับไป QT
+    </a>
+
+    {% if c.status != "ยกเลิกสัญญา" %}
+      <form method="post" action="{{ url_for('pages.contract_cancel', contract_id=c.id) }}" style="display:inline;"
+            onsubmit="return confirm('ยืนยันยกเลิกสัญญา?\n* เมื่อยกเลิกแล้วจะไม่สามารถทำรายการต่อกับสัญญานี้ได้');">
+        <button class="btn btn-outline-danger" type="submit">
+          <i class="bi bi-x-octagon me-1"></i>ยกเลิกสัญญา
+        </button>
+      </form>
+    {% else %}
+      <button class="btn btn-outline-danger" type="button" disabled>
+        <i class="bi bi-lock me-1"></i>ยกเลิกแล้ว
+      </button>
+    {% endif %}
+
+    <button class="btn btn-outline-dark" disabled>
+      <i class="bi bi-printer me-1"></i>Print
+    </button>
+  </div>
+</div>
+
+{% if c.status == "ยกเลิกสัญญา" %}
+  <div class="alert alert-warning shadow-sm">
+    <div class="fw-semibold mb-1"><i class="bi bi-shield-lock me-1"></i>สัญญานี้ถูกยกเลิกแล้ว</div>
+    <div class="small">ระบบจะล็อกการทำงานทั้งหมด (สร้าง/แก้ไขงวด, ออกเอกสาร, เปลี่ยนสถานะเอกสาร, รับเงิน ฯลฯ)</div>
+  </div>
+{% endif %}
+
+<div class="row g-3">
+
+  <div class="col-12 col-xl-8">
+
+    <div class="card app-card shadow-sm mb-3">
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="fw-semibold">ลูกค้า</div>
+            <div class="text-secondary">{{ q.customer.name }}</div>
+          </div>
+          <div class="col-md-6">
+            <div class="fw-semibold">พื้นที่โครงการ</div>
+            <div class="text-secondary">{{ c.project_site or '-' }}</div>
+          </div>
+          <div class="col-md-6">
+            <div class="fw-semibold">ระยะสัญญา</div>
+            <div class="text-secondary">
+              {{ c.start_date.strftime('%d/%m/%Y') if c.start_date else '-' }}
+              ถึง
+              {{ c.end_date.strftime('%d/%m/%Y') if c.end_date else '-' }}
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="fw-semibold">ยอดชำระสุทธิ (จาก QT)</div>
+            <div class="text-primary fw-bold">{{ "{:,.2f}".format(q.net_payable or 0) }}</div>
+          </div>
+
+          <div class="col-12">
+            <div class="fw-semibold">หมายเหตุ</div>
+            <div class="text-secondary">{{ c.remark or '-' }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card app-card shadow-sm" id="installments">
+      <div class="card-body">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+          <h5 class="mb-0"><i class="bi bi-calendar2-week me-2"></i>งวด</h5>
+
+          {% if c.status == "ยกเลิกสัญญา" %}
+            <button class="btn btn-outline-primary" type="button" disabled>
+              <i class="bi bi-lock me-1"></i>ล็อกแล้ว
+            </button>
+          {% else %}
+            <form class="d-flex gap-2" method="post" action="{{ url_for('pages.contract_generate_installments', contract_id=c.id) }}">
+              <input class="form-control" style="width:160px" name="months" type="number" min="1" placeholder="จำนวนงวด/เดือน">
+              <button class="btn btn-outline-primary" type="submit">
+                <i class="bi bi-magic me-1"></i>สร้างงวดอัตโนมัติ
+              </button>
+            </form>
+          {% endif %}
+        </div>
+
+        <div class="small text-secondary mb-3">
+          สร้างงวดอัตโนมัติจากยอดชำระสุทธิของ QT · งวดละ 1 ใบ BL / 1 ใบ TAX / 1 ใบ RC
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th style="width:90px">งวด</th>
+                <th style="width:140px">กำหนดชำระ</th>
+                <th class="text-end" style="width:160px">ยอดงวด</th>
+                <th style="width:140px">สถานะ</th>
+                <th class="text-end" style="width:260px">เอกสาร</th>
+                <th class="text-end" style="width:140px">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody>
+
+              {% for ins in c.installments %}
+                <tr>
+                  <td class="fw-semibold">{{ ins.seq }}</td>
+                  <td>{{ ins.due_date.strftime('%d/%m/%Y') if ins.due_date else '-' }}</td>
+                  <td class="text-end fw-semibold">{{ "{:,.2f}".format(ins.amount or 0) }}</td>
+
+                  <td>
+                    {% if ins.status == "ชำระแล้ว" %}
+                      <span class="badge bg-success">ชำระแล้ว</span>
+                    {% else %}
+                      <span class="badge bg-secondary">ยังไม่ชำระ</span>
+                    {% endif %}
+                  </td>
+
+                  <td class="text-end">
+                    {% if ins.billing %}
+                      <a class="btn btn-sm btn-outline-dark" href="{{ url_for('pages.billing_view', billing_id=ins.billing.id) }}">BL</a>
+                    {% else %}
+                      <span class="badge text-bg-light border">BL-</span>
+                    {% endif %}
+
+                    {% if ins.tax_invoice %}
+                      <a class="btn btn-sm btn-outline-dark" href="{{ url_for('pages.tax_view', tax_id=ins.tax_invoice.id) }}">TAX</a>
+                    {% else %}
+                      <span class="badge text-bg-light border">TAX-</span>
+                    {% endif %}
+
+                    {% if ins.receipt %}
+                      <a class="btn btn-sm btn-outline-dark" href="{{ url_for('pages.receipt_view', receipt_id=ins.receipt.id) }}">RC</a>
+                    {% else %}
+                      <span class="badge text-bg-light border">RC-</span>
+                    {% endif %}
+                  </td>
+
+                  <td class="text-end">
+                    <a class="btn btn-sm btn-outline-primary" href="{{ url_for('pages.installment_view', inst_id=ins.id) }}">
+                      <i class="bi bi-eye me-1"></i>ดู
+                    </a>
+                  </td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="6" class="text-center text-secondary py-4">
+                    ยังไม่มีงวด (กด “สร้างงวดอัตโนมัติ” ด้านบน)
+                  </td>
+                </tr>
+              {% endfor %}
+
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="col-12 col-xl-4">
+    <div class="card app-card shadow-sm sticky-summary">
+      <div class="card-body">
+        <h5 class="mb-3"><i class="bi bi-receipt me-2 text-primary"></i>สรุป</h5>
+
+        <div class="summary-row">
+          <div>ยอดชำระสุทธิ (QT)</div>
+          <div class="fw-semibold">{{ "{:,.2f}".format(q.net_payable or 0) }}</div>
+        </div>
+
+        <div class="summary-row">
+          <div>จำนวนงวด</div>
+          <div class="fw-semibold">{{ c.installments|length }}</div>
+        </div>
+
+        <hr>
+
+        {% set ns = namespace(paid=0, unpaid=0) %}
+        {% for ins in c.installments %}
+          {% if ins.status == 'ชำระแล้ว' %}
+            {% set ns.paid = ns.paid + (ins.amount or 0) %}
+          {% else %}
+            {% set ns.unpaid = ns.unpaid + (ins.amount or 0) %}
+          {% endif %}
+        {% endfor %}
+
+        <div class="summary-row">
+          <div>ชำระแล้ว</div>
+          <div class="fw-semibold text-success">{{ "{:,.2f}".format(ns.paid) }}</div>
+        </div>
+        <div class="summary-row">
+          <div>ค้างชำระ</div>
+          <div class="fw-semibold text-danger">{{ "{:,.2f}".format(ns.unpaid) }}</div>
+        </div>
+
+        <div class="small text-secondary mt-3">
+          * สถานะสัญญาจะปิดอัตโนมัติเมื่อค้างชำระ = 0
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

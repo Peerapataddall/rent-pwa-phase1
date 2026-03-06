@@ -1,0 +1,185 @@
+<!-- app/templates/base.html -->
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{ title or "Rent PWA" }}</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Bootstrap + Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+
+  <!-- ✅ Searchable Dropdown (Choices.js - no jQuery) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+
+  <!-- ✅ small tweak so Choices fits Bootstrap look -->
+  <style>
+    .choices { margin-bottom: 0; }
+    .choices__inner { min-height: calc(2.375rem + 2px); padding: .375rem .75rem; border-radius: .375rem; }
+    .choices__list--dropdown .choices__item--selectable { padding-right: .75rem; }
+    .choices[data-type*="select-one"] .choices__inner { padding-bottom: .375rem; }
+    .choices__input { margin-bottom: 0; }
+  </style>
+</head>
+
+<body class="app-bg">
+<nav class="navbar navbar-expand-lg app-nav shadow-sm">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-semibold d-flex align-items-center gap-2" href="{{ url_for('pages.dashboard') }}">
+      <span class="app-logo"><i class="bi bi-snow2"></i></span>
+      RentFlow
+    </a>
+  </div>
+</nav>
+
+<div class="container-fluid py-3">
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% if msgs %}
+      <div class="mb-3">
+        {% for cat,msg in msgs %}
+          <div class="alert alert-{{ cat }} mb-2">{{ msg }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <div class="row g-3">
+    <aside class="col-12 col-lg-2">
+      <div class="card app-card shadow-sm">
+        <div class="card-body p-2">
+          <div class="d-grid gap-2">
+            <!-- ===================== -->
+            <!-- เช่า (เดิม) -->
+            <!-- ===================== -->
+            <a class="btn btn-outline-primary text-start" href="{{ url_for('pages.quote_list') }}">
+              <i class="bi bi-file-earmark-text me-2"></i> ใบเสนอราคา (เช่า)
+            </a>
+            <a class="btn btn-outline-primary text-start" href="{{ url_for('pages.customer_list') }}">
+              <i class="bi bi-people me-2"></i> แฟ้มลูกค้า
+            </a>
+
+            <!-- ===================== -->
+            <!-- ซื้อ/คลัง (Phase นี้) -->
+            <!-- ===================== -->
+            <div class="mt-2">
+              <div class="fw-semibold text-secondary small mb-2">
+                <i class="bi bi-box-seam me-1"></i> ซื้อ/คลัง
+              </div>
+
+              <div class="d-grid gap-2">
+                <a class="btn btn-outline-success text-start" href="{{ url_for('pages.po_page') }}">
+                  <i class="bi bi-cart-check me-2"></i> สั่งซื้อ (PO)
+                </a>
+                <a class="btn btn-outline-success text-start" href="{{ url_for('pages.grn_page') }}">
+                  <i class="bi bi-box-arrow-in-down me-2"></i> รับสินค้า (GRN) / ซื้อเข้า
+                </a>
+                <a class="btn btn-outline-success text-start" href="{{ url_for('pages.supplier_list') }}">
+                  <i class="bi bi-building me-2"></i> แฟ้มเจ้าหนี้
+                </a>
+
+                <a class="btn btn-outline-success text-start" href="{{ url_for('pages.stock_dashboard') }}">
+                  <i class="bi bi-speedometer2 me-2"></i> สรุปสต็อก (Dashboard)
+                </a>
+                <a class="btn btn-outline-success text-start" href="{{ url_for('pages.asset_page') }}">
+                  <i class="bi bi-tools me-2"></i> อุปกรณ์ (Asset)
+                </a>
+                <a class="btn btn-outline-success text-start" href="{{ url_for('pages.category_page') }}">
+                  <i class="bi bi-tags me-2"></i> หมวดหมู่ (Category)
+                </a>
+                <a class="btn btn-outline-success text-start" href="{{ url_for('pages.stock_adjust_page') }}">
+                  <i class="bi bi-wrench-adjustable-circle me-2"></i> ปรับสต็อก (Adjust)
+                </a>
+              </div>
+            </div>
+
+            <!-- ===================== -->
+            <!-- Reports (เดิม) -->
+            <!-- ===================== -->
+            <a class="btn btn-outline-primary text-start mt-2" href="{{ url_for('pages.reports_index') }}">
+              <i class="bi bi-graph-up-arrow me-2"></i> Report Center
+            </a>
+          </div>
+          <hr class="my-3">
+          <small class="text-secondary">Phase 2 · AR / Statement / Reports</small>
+        </div>
+      </div>
+    </aside>
+
+    <main class="col-12 col-lg-10">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- ✅ Searchable Dropdown (Choices.js) -->
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+
+<script>
+  // =========================================================
+  // Searchable Dropdown: enable by adding class "js-search" to <select>
+  // - ใช้กับทุก dropdown ที่ต้องการค้นหา (ลูกค้า/สินค้า/หมวด/หน่วย/ซัพพลายเออร์ ฯลฯ)
+  // - เวลาเติม option ใหม่ด้วย JS: เรียก window.refreshSearchSelect(selectEl)
+  // =========================================================
+  (function () {
+    window.__choicesInstances = window.__choicesInstances || new Map();
+
+    window.initSearchableSelects = function (root) {
+      const scope = root || document;
+      const selects = scope.querySelectorAll("select.js-search");
+      selects.forEach((sel) => {
+        if (!sel || sel.dataset.choicesReady === "1") return;
+
+        // ไม่ทำกับ disabled ที่ยังไม่อยากให้พิมพ์ค้นหา (แต่ถ้า disabled ก็ไม่เป็นไร)
+        const inst = new Choices(sel, {
+          searchEnabled: true,
+          searchChoices: true,
+          shouldSort: false,
+          itemSelectText: "",
+          allowHTML: false,
+          placeholder: true,
+          placeholderValue: sel.getAttribute("placeholder") || "",
+          searchPlaceholderValue: "พิมพ์เพื่อค้นหา...",
+          noResultsText: "ไม่พบข้อมูล",
+          noChoicesText: "ไม่มีตัวเลือก",
+        });
+
+        sel.dataset.choicesReady = "1";
+        window.__choicesInstances.set(sel, inst);
+      });
+    };
+
+    window.refreshSearchSelect = function (selectEl) {
+      try {
+        const inst = window.__choicesInstances.get(selectEl);
+        if (!inst) {
+          // ยังไม่ init => init ใหม่
+          window.initSearchableSelects(document);
+          return;
+        }
+        // บังคับให้ choices อ่าน option ใหม่
+        inst.setChoices([], "value", "label", true);
+      } catch (e) {
+        // silent
+      }
+    };
+
+    document.addEventListener("DOMContentLoaded", () => {
+      window.initSearchableSelects(document);
+    });
+  })();
+</script>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+{% block page_js %}{% endblock %}
+</body>
+</html>

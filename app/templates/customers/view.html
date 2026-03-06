@@ -1,0 +1,507 @@
+{# app/templates/customers/view.html #}
+{% extends "base.html" %}
+{% set title = "ข้อมูลลูกค้า" %}
+{% block content %}
+
+{% set tab = request.args.get('tab','t1') %}
+
+<div class="card app-card shadow-sm mb-3">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+      <div>
+        <h4 class="mb-1">{{ c.name }}</h4>
+        <div class="text-secondary small">
+          Tax ID: {{ c.tax_id or "-" }}
+          · โทร: {{ c.phone or "-" }}
+          · เครดิต: {{ c.credit_days or 0 }} วัน
+          · วงเงิน: {{ "{:,.2f}".format(c.credit_limit or 0) }}
+        </div>
+      </div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#modalCustomer"
+                onclick="prepareCustomerModal('{{ request.full_path }}')">
+          <i class="bi bi-person-plus me-1"></i>เพิ่มลูกค้า
+        </button>
+        <a class="btn btn-outline-secondary" href="{{ url_for('pages.customer_list') }}">
+          <i class="bi bi-arrow-left me-1"></i>กลับ
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card app-card shadow-sm">
+  <div class="card-body">
+
+    <ul class="nav nav-tabs" role="tablist">
+      <li class="nav-item">
+        <button class="nav-link {% if tab=='t1' %}active{% endif %}"
+                data-bs-toggle="tab" data-bs-target="#t1" type="button">
+          รายละเอียด
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link {% if tab=='tDocs' %}active{% endif %}"
+                data-bs-toggle="tab" data-bs-target="#tDocs" type="button">
+          เอกสารของลูกค้า
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link {% if tab=='t2' %}active{% endif %}"
+                data-bs-toggle="tab" data-bs-target="#t2" type="button">
+          ยอดหนี้
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link {% if tab=='t3' %}active{% endif %}"
+                data-bs-toggle="tab" data-bs-target="#t3" type="button">
+          การ์ดลูกหนี้
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link {% if tab=='t4' %}active{% endif %}"
+                data-bs-toggle="tab" data-bs-target="#t4" type="button">
+          ยอดคงค้าง
+        </button>
+      </li>
+    </ul>
+
+    <div class="tab-content pt-3">
+
+      <!-- Tab: รายละเอียด -->
+      <div class="tab-pane fade {% if tab=='t1' %}show active{% endif %}" id="t1">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="fw-semibold mb-1">ที่อยู่</div>
+            <div class="text-secondary">{{ c.address or "-" }}</div>
+          </div>
+          <div class="col-md-6">
+            <div class="fw-semibold mb-1">อีเมล</div>
+            <div class="text-secondary">{{ c.email or "-" }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: เอกสารของลูกค้า -->
+      <div class="tab-pane fade {% if tab=='tDocs' %}show active{% endif %}" id="tDocs">
+
+        <!-- Search (Project / Doc No / Type) -->
+        <div class="card border-0 shadow-sm mb-3">
+          <div class="card-body">
+            <form class="row g-2 align-items-end" method="GET"
+                  action="{{ url_for('pages.customer_view', customer_id=c.id) }}">
+
+              <input type="hidden" name="tab" value="tDocs">
+
+              <div class="col-md-5">
+                <label class="form-label mb-1">ค้นจากชื่อโครงการ/หน้างาน</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  name="project"
+                  value="{{ request.args.get('project','') }}"
+                  placeholder="เช่น โครงการจันทบุรี"
+                >
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label mb-1">ค้นจากเลขเอกสาร (QT/CT/BL/TX/RC)</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  name="doc"
+                  value="{{ request.args.get('doc','') }}"
+                  placeholder="เช่น QT2603..., CT2603..., BL..."
+                >
+              </div>
+
+              <div class="col-md-3">
+                <label class="form-label mb-1">ชนิดเอกสาร</label>
+                <select class="form-select" name="type">
+                  {% set tsel = request.args.get('type','') %}
+                  <option value="" {{ 'selected' if tsel=='' else '' }}>ทั้งหมด</option>
+                  <option value="QT" {{ 'selected' if tsel=='QT' else '' }}>QT ใบเสนอราคา</option>
+                  <option value="CT" {{ 'selected' if tsel=='CT' else '' }}>CT สัญญา</option>
+                  <option value="BL" {{ 'selected' if tsel=='BL' else '' }}>BL ใบวางบิล</option>
+                  <option value="TX" {{ 'selected' if tsel=='TX' else '' }}>TX ใบกำกับภาษี</option>
+                  <option value="RC" {{ 'selected' if tsel=='RC' else '' }}>RC ใบเสร็จรับเงิน</option>
+                </select>
+              </div>
+
+              <div class="col-12 d-flex gap-2 mt-2 flex-wrap">
+                <button class="btn btn-primary" type="submit">
+                  <i class="bi bi-search me-1"></i>ค้นหาเอกสาร
+                </button>
+
+                <a class="btn btn-outline-secondary"
+                   href="{{ url_for('pages.customer_view', customer_id=c.id, tab='tDocs') }}">
+                  <i class="bi bi-x-circle me-1"></i>ล้าง
+                </a>
+
+                <div class="ms-auto small text-secondary align-self-center">
+                  * ค้น/กรองได้จาก: โครงการ, เลขเอกสาร, ชนิดเอกสาร
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        {% set quotes = quotes|default([]) %}
+        {% set contracts = contracts|default([]) %}
+        {% set billings = billings|default([]) %}
+        {% set taxes = taxes|default([]) %}
+        {% set receipts = receipts|default([]) %}
+
+        {% if quotes or contracts or billings or taxes or receipts %}
+          <div class="table-responsive">
+            <table class="table table-hover align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th style="width:110px;">ชนิด</th>
+                  <th style="width:170px;">เลขที่</th>
+                  <th style="width:140px;">วันที่</th>
+                  <th>โครงการ/หน้างาน</th>
+                  <th style="width:160px;" class="text-end">ยอด</th>
+                  <th style="width:140px;" class="text-end">เปิดดู</th>
+                </tr>
+              </thead>
+              <tbody>
+
+                {% for q in quotes %}
+                  <tr>
+                    <td><span class="badge bg-secondary">QT</span></td>
+                    <td class="fw-semibold">{{ q.doc_no }}</td>
+                    <td>{{ q.doc_date.strftime('%d/%m/%Y') if q.doc_date else '-' }}</td>
+                    <td class="text-secondary">{{ q.project_site or '-' }}</td>
+                    <td class="text-end">{{ "{:,.2f}".format(q.net_payable or 0) }}</td>
+                    <td class="text-end">
+                      <a class="btn btn-sm btn-outline-primary" href="{{ url_for('pages.quote_view', quote_id=q.id) }}">
+                        <i class="bi bi-eye me-1"></i>View
+                      </a>
+                    </td>
+                  </tr>
+                {% endfor %}
+
+                {% for ct in contracts %}
+                  <tr>
+                    <td><span class="badge bg-primary">CT</span></td>
+                    <td class="fw-semibold">{{ ct.doc_no }}</td>
+                    <td>{{ ct.doc_date.strftime('%d/%m/%Y') if ct.doc_date else '-' }}</td>
+                    <td class="text-secondary">{{ ct.project_site or (ct.quote.project_site if ct.quote else '-') }}</td>
+                    <td class="text-end">-</td>
+                    <td class="text-end">
+                      <a class="btn btn-sm btn-outline-primary" href="{{ url_for('pages.contract_view', contract_id=ct.id) }}">
+                        <i class="bi bi-eye me-1"></i>View
+                      </a>
+                    </td>
+                  </tr>
+                {% endfor %}
+
+                {% for b in billings %}
+                  <tr>
+                    <td><span class="badge bg-dark">BL</span></td>
+                    <td class="fw-semibold">{{ b.doc_no }}</td>
+                    <td>{{ b.doc_date.strftime('%d/%m/%Y') if b.doc_date else '-' }}</td>
+                    <td class="text-secondary">
+                      {{ b.installment.contract.project_site if b.installment and b.installment.contract else '-' }}
+                    </td>
+                    <td class="text-end">{{ "{:,.2f}".format(b.amount or 0) }}</td>
+                    <td class="text-end">
+                      <a class="btn btn-sm btn-outline-primary" href="{{ url_for('pages.billing_view', billing_id=b.id) }}">
+                        <i class="bi bi-eye me-1"></i>View
+                      </a>
+                    </td>
+                  </tr>
+                {% endfor %}
+
+                {% for t in taxes %}
+                  <tr>
+                    <td><span class="badge bg-success">TX</span></td>
+                    <td class="fw-semibold">{{ t.doc_no }}</td>
+                    <td>{{ t.doc_date.strftime('%d/%m/%Y') if t.doc_date else '-' }}</td>
+                    <td class="text-secondary">
+                      {{ t.installment.contract.project_site if t.installment and t.installment.contract else '-' }}
+                    </td>
+                    <td class="text-end">{{ "{:,.2f}".format(t.amount or 0) }}</td>
+                    <td class="text-end">
+                      <a class="btn btn-sm btn-outline-primary" href="{{ url_for('pages.tax_view', tax_id=t.id) }}">
+                        <i class="bi bi-eye me-1"></i>View
+                      </a>
+                    </td>
+                  </tr>
+                {% endfor %}
+
+                {% for r in receipts %}
+                  <tr>
+                    <td><span class="badge bg-warning text-dark">RC</span></td>
+                    <td class="fw-semibold">{{ r.doc_no }}</td>
+                    <td>{{ r.doc_date.strftime('%d/%m/%Y') if r.doc_date else '-' }}</td>
+                    <td class="text-secondary">
+                      {{ r.installment.contract.project_site if r.installment and r.installment.contract else '-' }}
+                    </td>
+                    <td class="text-end">{{ "{:,.2f}".format(r.amount or 0) }}</td>
+                    <td class="text-end">
+                      <a class="btn btn-sm btn-outline-primary" href="{{ url_for('pages.receipt_view', receipt_id=r.id) }}">
+                        <i class="bi bi-eye me-1"></i>View
+                      </a>
+                    </td>
+                  </tr>
+                {% endfor %}
+
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="text-secondary">
+            ไม่พบเอกสารของลูกค้ารายนี้ตามเงื่อนไขที่ค้นหา
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Tab: ยอดหนี้ -->
+      <div class="tab-pane fade {% if tab=='t2' %}show active{% endif %}" id="t2">
+        <div class="row g-3 mb-3">
+          <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-body">
+                <div class="text-secondary small">ยอดหนี้ (เกิดหนี้แล้ว)</div>
+                <div class="fs-4 fw-bold">{{ "{:,.2f}".format(ar_total or 0) }}</div>
+                <div class="small text-secondary mt-1">
+                  เกิดจาก: TX(อนุมัติแล้ว) ก่อน ถ้าไม่มีค่อยใช้ BL(วางบิลแล้ว)
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-body">
+                <div class="text-secondary small">ยอดรับชำระ (รับเงินแล้ว)</div>
+                <div class="fs-4 fw-bold">{{ "{:,.2f}".format(paid_total or 0) }}</div>
+                <div class="small text-secondary mt-1">
+                  นับเฉพาะ RC ที่สถานะ “รับเงินแล้ว”
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-body">
+                <div class="text-secondary small">ยอดคงค้าง</div>
+                <div class="fs-4 fw-bold">{{ "{:,.2f}".format(outstanding_total or 0) }}</div>
+                <div class="small text-secondary mt-1">
+                  คงค้าง = ยอดหนี้ - ยอดรับชำระ
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead class="table-light">
+              <tr>
+                <th style="width:90px;">งวด</th>
+                <th style="width:140px;">กำหนดชำระ</th>
+                <th style="width:160px;">แหล่งเกิดหนี้</th>
+                <th style="width:170px;">เลขเอกสาร</th>
+                <th>โครงการ/หน้างาน</th>
+                <th class="text-end" style="width:140px;">ยอดหนี้</th>
+                <th class="text-end" style="width:140px;">รับชำระ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in outstanding_rows|default([]) %}
+                {% set ins = row.installment %}
+                <tr>
+                  <td class="fw-semibold">{{ row.seq or "-" }}</td>
+                  <td>{{ row.due_date.strftime('%d/%m/%Y') if row.due_date else "-" }}</td>
+                  <td>
+                    {% if row.debit_source == "TX" %}
+                      <span class="badge bg-success">TX</span>
+                      <span class="text-secondary small ms-1">อนุมัติแล้ว</span>
+                    {% elif row.debit_source == "BL" %}
+                      <span class="badge bg-dark">BL</span>
+                      <span class="text-secondary small ms-1">วางบิลแล้ว</span>
+                    {% else %}
+                      <span class="text-secondary">ยังไม่เกิดหนี้</span>
+                    {% endif %}
+                  </td>
+                  <td class="fw-semibold">
+                    {% if row.debit_doc %}
+                      {{ row.debit_doc.doc_no }}
+                    {% else %}
+                      -
+                    {% endif %}
+                  </td>
+                  <td class="text-secondary">
+                    {{ ins.contract.project_site or (ins.contract.quote.project_site if ins.contract and ins.contract.quote else '-') if ins and ins.contract else '-' }}
+                  </td>
+                  <td class="text-end">{{ "{:,.2f}".format(row.debit or 0) }}</td>
+                  <td class="text-end">{{ "{:,.2f}".format(row.paid or 0) }}</td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="7" class="text-center text-secondary py-4">ยังไม่มีรายการหนี้/รับชำระ</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab: การ์ดลูกหนี้ -->
+      <div class="tab-pane fade {% if tab=='t3' %}show active{% endif %}" id="t3">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <div class="text-secondary small">
+            Timeline ของ BL/TX/RC (เรียงวันที่) พร้อม Running Balance
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead class="table-light">
+              <tr>
+                <th style="width:140px;">วันที่</th>
+                <th style="width:120px;">ประเภท</th>
+                <th style="width:180px;">เลขที่</th>
+                <th>โครงการ/หน้างาน</th>
+                <th class="text-end" style="width:140px;">เดบิต</th>
+                <th class="text-end" style="width:140px;">เครดิต</th>
+                <th class="text-end" style="width:160px;">คงเหลือ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for e in statement_rows|default([]) %}
+                <tr>
+                  <td>{{ e.doc_date.strftime('%d/%m/%Y') if e.doc_date else "-" }}</td>
+                  <td>
+                    {% if e.type == "BL" %}
+                      <span class="badge bg-dark">BL</span>
+                    {% elif e.type == "TX" %}
+                      <span class="badge bg-success">TX</span>
+                    {% elif e.type == "RC" %}
+                      <span class="badge bg-warning text-dark">RC</span>
+                    {% else %}
+                      <span class="badge bg-secondary">{{ e.type }}</span>
+                    {% endif %}
+                  </td>
+                  <td class="fw-semibold">
+                    {% if e.type == "BL" %}
+                      <a href="{{ url_for('pages.billing_view', billing_id=e.ref.id) }}">{{ e.doc_no }}</a>
+                    {% elif e.type == "TX" %}
+                      <a href="{{ url_for('pages.tax_view', tax_id=e.ref.id) }}">{{ e.doc_no }}</a>
+                    {% elif e.type == "RC" %}
+                      <a href="{{ url_for('pages.receipt_view', receipt_id=e.ref.id) }}">{{ e.doc_no }}</a>
+                    {% else %}
+                      {{ e.doc_no }}
+                    {% endif %}
+                  </td>
+                  <td class="text-secondary">{{ e.project_site or "-" }}</td>
+                  <td class="text-end">{{ "{:,.2f}".format(e.debit or 0) }}</td>
+                  <td class="text-end">{{ "{:,.2f}".format(e.credit or 0) }}</td>
+                  <td class="text-end fw-semibold">{{ "{:,.2f}".format(e.balance or 0) }}</td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="7" class="text-center text-secondary py-4">ยังไม่มี statement</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab: ยอดคงค้าง -->
+      <div class="tab-pane fade {% if tab=='t4' %}show active{% endif %}" id="t4">
+        <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+          <div class="text-secondary small">
+            แยกคงค้างตามงวด/เอกสาร (ใช้กติกาเดียวกับยอดหนี้)
+          </div>
+          <div class="fw-semibold">
+            รวมคงค้าง: {{ "{:,.2f}".format(outstanding_total or 0) }}
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead class="table-light">
+              <tr>
+                <th style="width:90px;">งวด</th>
+                <th style="width:140px;">กำหนดชำระ</th>
+                <th style="width:160px;">BL</th>
+                <th style="width:160px;">TX</th>
+                <th style="width:160px;">RC</th>
+                <th class="text-end" style="width:140px;">ยอดคงค้าง</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in outstanding_rows|default([]) %}
+                {% set ins = row.installment %}
+                <tr>
+                  <td class="fw-semibold">{{ row.seq or "-" }}</td>
+                  <td>{{ row.due_date.strftime('%d/%m/%Y') if row.due_date else "-" }}</td>
+
+                  <td>
+                    {% if ins and ins.billing %}
+                      <a href="{{ url_for('pages.billing_view', billing_id=ins.billing.id) }}">{{ ins.billing.doc_no }}</a>
+                      <div class="small text-secondary">{{ ins.billing.status }}</div>
+                    {% else %}
+                      <span class="text-secondary">-</span>
+                    {% endif %}
+                  </td>
+
+                  <td>
+                    {% if ins and ins.tax_invoice %}
+                      <a href="{{ url_for('pages.tax_view', tax_id=ins.tax_invoice.id) }}">{{ ins.tax_invoice.doc_no }}</a>
+                      <div class="small text-secondary">{{ ins.tax_invoice.status }}</div>
+                    {% else %}
+                      <span class="text-secondary">-</span>
+                    {% endif %}
+                  </td>
+
+                  <td>
+                    {% if ins and ins.receipt %}
+                      <a href="{{ url_for('pages.receipt_view', receipt_id=ins.receipt.id) }}">{{ ins.receipt.doc_no }}</a>
+                      <div class="small text-secondary">{{ ins.receipt.status }}</div>
+                    {% else %}
+                      <span class="text-secondary">-</span>
+                    {% endif %}
+                  </td>
+
+                  <td class="text-end fw-semibold">{{ "{:,.2f}".format(row.outstanding or 0) }}</td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="6" class="text-center text-secondary py-4">ยังไม่มีงวด/เอกสาร</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ✅ Reuse modal -->
+{% include "customers/form_modal.html" %}
+
+{# ✅ ช่วยให้ deep-link tab ผ่าน ?tab=... ทำงาน “จริง” แม้ reload/กลับหน้า #}
+{% block page_js %}
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const tab = "{{ tab }}";
+    if (!tab) return;
+    const btn = document.querySelector(`[data-bs-target="#${tab}"]`);
+    if (btn) {
+      try {
+        const t = new bootstrap.Tab(btn);
+        t.show();
+      } catch (e) {}
+    }
+  });
+</script>
+{% endblock %}
+
+{% endblock %}

@@ -1,0 +1,115 @@
+<!-- app/templates/quotes/list.html -->
+{% extends "base.html" %}
+{% set title = "ใบเสนอราคา (เช่า)" %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <div>
+    <h4 class="mb-0">ใบเสนอราคา (เช่า)</h4>
+    <div class="text-secondary small">
+      QT → (อนุมัติ) → สัญญา/งวด/BL/TAX/RC (Phase ถัดไป)
+    </div>
+  </div>
+
+  <a class="btn btn-primary"
+     href="{{ url_for('pages.quote_new') }}">
+    <i class="bi bi-plus-lg me-1"></i> สร้างใหม่
+  </a>
+</div>
+
+<div class="card app-card shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th style="width:160px">เลขที่</th>
+          <th style="width:120px">วันที่</th>
+          <th>ลูกค้า</th>
+          <th class="text-end" style="width:160px">ยอดสุทธิ</th>
+          <th class="text-end" style="width:160px">มัดจำรวม</th>
+          <th style="width:160px">สถานะ</th>
+          <th class="text-end" style="width:240px">จัดการ</th>
+        </tr>
+      </thead>
+
+      <tbody>
+      {% for r in rows %}
+        <tr>
+
+          <!-- DOC NO -->
+          <td class="fw-semibold text-primary">
+            {{ r.doc_no }}
+          </td>
+
+          <!-- DATE -->
+          <td>
+            {{ r.doc_date.strftime("%d/%m/%Y") }}
+          </td>
+
+          <!-- CUSTOMER -->
+          <td>
+            <div class="fw-medium">{{ r.customer.name }}</div>
+          </td>
+
+          <!-- NET -->
+          <td class="text-end fw-semibold">
+            {{ "{:,.2f}".format(r.net_payable or 0) }}
+          </td>
+
+          <!-- DEPOSIT -->
+          <td class="text-end text-info fw-semibold">
+            {{ "{:,.2f}".format(r.deposit_total or 0) }}
+          </td>
+
+          <!-- STATUS -->
+          <td>
+            {% if r.status in ["อนุมัติ", "อนุมัติ"] %}
+              <span class="badge bg-success">
+                <i class="bi bi-check-circle me-1"></i> อนุมัติ
+              </span>
+              {% if r.approved_at %}
+                <div class="small text-secondary mt-1">
+                  {{ r.approved_at.strftime("%d/%m/%Y %H:%M") }}
+                </div>
+              {% endif %}
+            {% elif r.status == "ยกเลิก" %}
+              <span class="badge bg-danger">
+                <i class="bi bi-x-circle me-1"></i> ยกเลิก
+              </span>
+            {% else %}
+              <span class="badge bg-secondary">
+                <i class="bi bi-pencil-square me-1"></i> ร่าง
+              </span>
+            {% endif %}
+          </td>
+
+          <!-- ACTION -->
+          <td class="text-end">
+            <a class="btn btn-sm btn-outline-primary"
+               href="{{ url_for('pages.quote_view', quote_id=r.id) }}">
+              <i class="bi bi-eye me-1"></i> ดู
+            </a>
+
+            {% if r.status == "ร่าง" %}
+              <a class="btn btn-sm btn-outline-warning"
+                 href="{{ url_for('pages.quote_edit', quote_id=r.id) }}">
+                <i class="bi bi-pencil me-1"></i> แก้ไข
+              </a>
+            {% endif %}
+          </td>
+
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="7" class="text-center text-secondary py-4">
+            ยังไม่มีเอกสาร
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+
+    </table>
+  </div>
+</div>
+
+{% endblock %}

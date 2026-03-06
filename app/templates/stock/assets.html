@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+{% set title = "Stock · อุปกรณ์ (Asset)" %}
+{% block content %}
+
+
+<div class="card app-card shadow-sm mb-3">
+  <div class="card-body">
+    <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+      <div>
+        <h4 class="mb-0"><i class="bi bi-tools me-2"></i>Stock · อุปกรณ์ (Asset / Equipment)</h4>
+        <div class="text-secondary small">หน้าเดียวจบ · Filter + Search + Table + Modal Add/Edit + Upload รูป</div>
+      </div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-primary" onclick="openAssetModal(null)">
+          <i class="bi bi-plus-lg me-1"></i> เพิ่มอุปกรณ์
+        </button>
+      </div>
+    </div>
+
+    <hr class="my-3">
+
+    <form class="row g-2 align-items-end" method="get">
+      <div class="col-12 col-md-5">
+        <label class="form-label mb-1">ค้นหา</label>
+        <input class="form-control" name="q" value="{{ q }}" placeholder="รหัส / ชื่อ / หมวด">
+      </div>
+      <div class="col-6 col-md-3">
+        <label class="form-label mb-1">หมวด</label>
+        <select class="form-select" name="category_id">
+          <option value="">ทั้งหมด</option>
+          {% for c in categories %}
+            <option value="{{ c.id }}" {{ category_id==c.id and "selected" }}>{{ c.code }} · {{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label mb-1">สถานะ</label>
+        <select class="form-select" name="status">
+          <option value="" {{ ""==status and "selected" }}>ทั้งหมด</option>
+          {% for s in asset_statuses_th %}
+            <option value="{{ s }}" {{ s==status and "selected" }}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12 col-md-2 d-flex gap-2">
+        <button class="btn btn-outline-primary w-100"><i class="bi bi-search me-1"></i>ค้นหา</button>
+        <a class="btn btn-outline-secondary w-100" href="{{ url_for('pages.asset_page') }}"><i class="bi bi-x-circle me-1"></i>ล้าง</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card app-card shadow-sm">
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-sm align-middle">
+        <thead class="table-light">
+          <tr>
+            <th style="width:72px;">รูป</th>
+            <th style="width:140px;">รหัส</th>
+            <th>ชื่อ</th>
+            <th style="width:180px;">หมวด</th>
+            <th style="width:120px;">สถานะ</th>
+            <th style="width:120px;" class="text-end">ต้นทุน</th>
+            <th style="width:140px;" class="text-end">มูลค่าคงเหลือ</th>
+            <th style="width:120px;">วันที่รับเข้า</th>
+            <th style="width:120px;">หมดอายุ</th>
+            <th style="width:90px;" class="text-end">แก้ไข</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in rows %}
+          <tr>
+            <td>
+              {% set main = None %}
+              {% for p in a.photos %}
+                {% if p.is_main %}
+                  {% set main = p %}
+                {% endif %}
+              {% endfor %}
+              {% if not main and a.photos|length > 0 %}
+                {% set main = a.photos[0] %}
+              {% endif %}
+
+              {% if main %}
+                <img src="{{ url_for('static', filename=main.file_path) }}" class="rounded" style="width:56px;height:56px;object-fit:cover;">
+              {% else %}
+                <div class="rounded bg-light border d-flex align-items-center justify-content-center" style="width:56px;height:56px;">
+                  <i class="bi bi-image text-secondary"></i>
+                </div>
+              {% endif %}
+            </td>
+
+            <td class="fw-semibold">{{ a.asset_code }}</td>
+
+            <td>
+              <div class="fw-semibold">{{ a.name }}</div>
+              <div class="text-secondary small">
+                ต้นทุน {{ "{:,.2f}".format(a.cost or 0) }} · ค่าเสื่อมสะสม {{ "{:,.2f}".format(a.depreciation_accum) }}
+              </div>
+            </td>
+
+            <td class="text-secondary">
+              <span class="text-uppercase">{{ a.category.code }}</span> · {{ a.category.name }}
+            </td>
+
+            <td>
+              {% set st = a._status_th if a._status_th is defined else (a.status or "") %}
+              {% if st == "พร้อมใช้งาน" %}
+                <span class="badge text-bg-success">พร้อมใช้งาน</span>
+              {% elif st == "จองแล้ว" %}
+                <span class="badge text-bg-info">จองแล้ว</span>
+              {% elif st == "กำลังเช่า" %}
+                <span class="badge text-bg-primary">กำลังเช่า</span>
+              {% elif st == "รอตรวจสภาพ" %}
+                <span class="badge text-bg-warning">รอตรวจสภาพ</span>
+              {% elif st == "ซ่อม" %}
+                <span class="badge text-bg-warning">ซ่อม</span>
+              {% elif st == "สูญหาย" %}
+                <span class="badge text-bg-danger">สูญหาย</span>
+              {% else %}
+                <span class="badge text-bg-secondary">จำหน่ายออก</span>
+              {% endif %}
+            </td>
+
+            <td class="text-end">{{ "{:,.2f}".format(a.cost or 0) }}</td>
+            <td class="text-end">{{ "{:,.2f}".format(a.book_value) }}</td>
+            <td>{{ a.purchase_date }}</td>
+            <td>{{ a.expired_date or "-" }}</td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-outline-primary" onclick="openAssetModal({{ a.id }})"><i class="bi bi-pencil-square"></i></button>
+            </td>
+          </tr>
+          {% endfor %}
+          {% if rows|length == 0 %}
+          <tr><td colspan="10" class="text-center text-secondary py-4">ยังไม่มีอุปกรณ์</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================================= -->
+<!-- Asset Modal -->
+<!-- ========================================================= -->
+<div class="modal fade" id="modalAsset" tabindex="-1">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-tools me-2"></i><span id="asset_title">เพิ่มอุปกรณ์</span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="asset_id" value="">
+
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">หมวด *</label>
+            <div class="input-group">
+              <select class="form-select" id="asset_category_id">
+                <option value="">เลือกหมวด</option>
+                {% for c in categories %}
+                  <option value="{{ c.id }}">{{ c.code }} · {{ c.name }}</option>
+                {% endfor %}
+              </select>
+              <button class="btn btn-outline-secondary" type="button" onclick="openCategoryModal(null, 'asset_category_id')">+ เพิ่ม</button>
+            </div>
+          </div>
+
+          <div class="col-md-8">
+            <label class="form-label">ชื่ออุปกรณ์ *</label>
+            <input class="form-control" id="asset_name" placeholder="เช่น สว่านกระแทก 13mm ...">
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label">ยี่ห้อ</label>
+            <div class="input-group">
+              <select class="form-select" id="asset_brand_id">
+                <option value="">-</option>
+                {% for b in brands %}
+                  <option value="{{ b.id }}">{{ b.name }}</option>
+                {% endfor %}
+              </select>
+              <button class="btn btn-outline-secondary" type="button" onclick="openBrandModal(null, 'asset_brand_id')">+ เพิ่ม</button>
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label">หน่วย</label>
+            <div class="input-group">
+              <select class="form-select" id="asset_unit_id">
+                <option value="">-</option>
+                {% for u in units %}
+                  <option value="{{ u.id }}">{{ u.name }}</option>
+                {% endfor %}
+              </select>
+              <button class="btn btn-outline-secondary" type="button" onclick="openUnitModal(null, 'asset_unit_id')">+ เพิ่ม</button>
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label">ซื้อจาก (เจ้าหนี้)</label>
+            <div class="input-group">
+              <select class="form-select" id="asset_supplier_id">
+                <option value="">-</option>
+                {% for s in suppliers %}
+                  <option value="{{ s.id }}">{{ s.name }}</option>
+                {% endfor %}
+              </select>
+              <button class="btn btn-outline-secondary" type="button" onclick="openSupplierModal(null, 'asset_supplier_id')">+ เพิ่ม</button>
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label">รหัสอุปกรณ์ *</label>
+            <div class="input-group">
+              <input class="form-control text-uppercase" id="asset_code" placeholder="เช่น SPT04036901">
+              <button class="btn btn-outline-primary" type="button" onclick="assetAutoCode()">
+                <i class="bi bi-magic me-1"></i> Auto
+              </button>
+            </div>
+            <div class="text-secondary small">รูปแบบ: {CAT}{DDMMYY}{NN} เช่น SPT04036901</div>
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label">ต้นทุน</label>
+            <input class="form-control" id="asset_cost" value="0">
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label">วันที่รับเข้า</label>
+            <input class="form-control" id="asset_purchase_date" type="date" value="{{ today }}">
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label">อายุการใช้งาน (วัน)</label>
+            <input class="form-control" id="asset_life_days" value="">
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label">อายุการใช้งาน (เดือน)</label>
+            <input class="form-control" id="asset_life_months" value="">
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label">สถานะ</label>
+            <select class="form-select" id="asset_status">
+              {% for s in asset_statuses_th %}
+                <option value="{{ s }}">{{ s }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="col-12">
+            <div class="row g-2">
+              <div class="col-md-4">
+                <div class="border rounded p-2 bg-light">
+                  <div class="text-secondary small">ค่าเสื่อมสะสม (คำนวณ)</div>
+                  <div class="fs-5 fw-semibold" id="asset_depr">0.00</div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="border rounded p-2 bg-light">
+                  <div class="text-secondary small">มูลค่าคงเหลือ (คำนวณ)</div>
+                  <div class="fs-5 fw-semibold" id="asset_bv">0.00</div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="border rounded p-2 bg-light">
+                  <div class="text-secondary small">วันหมดอายุ (คำนวณ)</div>
+                  <div class="fs-5 fw-semibold" id="asset_exp">-</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label">ราคาเช่า/วัน</label>
+            <input class="form-control" id="asset_rent_day" value="0">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">ราคาเช่า/เดือน</label>
+            <input class="form-control" id="asset_rent_month" value="0">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">ราคาเช่า/ปี</label>
+            <input class="form-control" id="asset_rent_year" value="0">
+          </div>
+
+          <div class="col-12">
+            <label class="form-label">อัปโหลดรูป (ขั้นต่ำ 5 รูป) + เลือกรูปปก</label>
+            <input class="form-control" id="asset_photos" type="file" accept="image/*" multiple>
+            <div class="text-secondary small mt-1">รองรับ jpg/png/webp · หลังบันทึกจะอัปโหลดและแสดงรายการรูปด้านล่าง</div>
+
+            <div class="mt-3" id="asset_photo_list"></div>
+          </div>
+        </div>
+
+        <div class="text-danger small mt-3" id="asset_err"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+        <button class="btn btn-primary" onclick="saveAsset()"><i class="bi bi-save me-1"></i>บันทึก</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% include "partials/master_modals.html" %}
+{% endblock %}

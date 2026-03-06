@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% set title = "งวด" %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <div>
+    <h4 class="mb-0">งวดที่ {{ ins.seq }}</h4>
+    <div class="text-secondary">
+      สัญญา: <a href="{{ url_for('pages.contract_view', contract_id=ins.contract.id) }}">{{ ins.contract.doc_no }}</a>
+      · กำหนดชำระ: {{ ins.due_date.strftime('%d/%m/%Y') if ins.due_date else '-' }}
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary" href="{{ url_for('pages.contract_view', contract_id=ins.contract.id) }}#installments">
+      <i class="bi bi-arrow-left me-1"></i>กลับไปสัญญา
+    </a>
+  </div>
+</div>
+
+{% if ins.contract.status == "ยกเลิกสัญญา" %}
+  <div class="alert alert-warning shadow-sm">
+    <div class="fw-semibold mb-1"><i class="bi bi-shield-lock me-1"></i>สัญญานี้ถูกยกเลิกแล้ว</div>
+    <div class="small">งวดและเอกสารถูกล็อก (ไม่สามารถแก้ไข/ออกเอกสาร/รับเงิน/เปลี่ยนสถานะได้)</div>
+  </div>
+{% endif %}
+
+<div class="row g-3">
+
+  <div class="col-12 col-xl-7">
+
+    <div class="card app-card shadow-sm">
+      <div class="card-body">
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="fw-semibold">ยอดงวด</div>
+            <div class="fs-4 fw-bold text-primary">{{ "{:,.2f}".format(ins.amount or 0) }}</div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="fw-semibold">สถานะงวด</div>
+            {% if ins.status == "ชำระแล้ว" %}
+              <span class="badge bg-success">ชำระแล้ว</span>
+              <div class="small text-secondary mt-1">
+                {% if ins.paid_at %}ชำระเมื่อ: {{ ins.paid_at.strftime('%d/%m/%Y %H:%M') }}{% endif %}
+                {% if ins.paid_note %}<div>หมายเหตุ: {{ ins.paid_note }}</div>{% endif %}
+              </div>
+            {% else %}
+              <span class="badge bg-secondary">ยังไม่ชำระ</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <hr>
+
+        <div class="d-flex flex-wrap align-items-center gap-2">
+
+          {% if ins.contract.status == "ยกเลิกสัญญา" %}
+            <button class="btn btn-success" type="button" disabled>
+              <i class="bi bi-lock me-1"></i>ล็อกแล้ว
+            </button>
+            <button class="btn btn-outline-secondary" type="button" disabled>
+              <i class="bi bi-lock me-1"></i>ล็อกแล้ว
+            </button>
+          {% else %}
+
+            {% if ins.status == "ชำระแล้ว" %}
+              <form method="post" action="{{ url_for('pages.installment_mark_unpaid', inst_id=ins.id) }}" style="display:inline;"
+                    onsubmit="return confirm('ยืนยันปรับเป็นยังไม่ชำระ?\n* ถ้ามีใบเสร็จ (RC) ที่รับเงินแล้ว ระบบจะไม่ให้ย้อนกลับ');">
+                <button class="btn btn-outline-secondary" type="submit">
+                  <i class="bi bi-arrow-counterclockwise me-1"></i>ปรับเป็นยังไม่ชำระ
+                </button>
+              </form>
+            {% else %}
+              <form method="post" action="{{ url_for('pages.installment_mark_paid', inst_id=ins.id) }}" class="d-flex gap-2 align-items-end" style="display:inline;">
+                <input class="form-control" style="width:220px" name="paid_note" placeholder="หมายเหตุ (ถ้ามี)">
+                <input class="form-control" style="width:220px" name="evidence_path" placeholder="ลิงก์หลักฐาน (ถ้ามี)">
+                <button class="btn btn-success" type="submit" onclick="return confirm('ยืนยันบันทึกชำระแล้ว?');">
+                  <i class="bi bi-check2-circle me-1"></i>บันทึกชำระแล้ว
+                </button>
+              </form>
+            {% endif %}
+
+          {% endif %}
+
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <div class="col-12 col-xl-5">
+
+    <div class="card app-card shadow-sm">
+      <div class="card-body">
+        <h5 class="mb-3"><i class="bi bi-file-earmark-text me-2"></i>เอกสารของงวด</h5>
+
+        {% if ins.contract.status == "ยกเลิกสัญญา" %}
+          <div class="small text-secondary mb-3">* สัญญาถูกยกเลิกแล้ว เอกสารถูกล็อก</div>
+        {% endif %}
+
+        <div class="d-grid gap-2">
+
+          <!-- BL -->
+          {% if ins.billing %}
+            <a class="btn btn-outline-dark" href="{{ url_for('pages.billing_view', billing_id=ins.billing.id) }}">
+              <i class="bi bi-receipt-cutoff me-1"></i>เปิด BL: {{ ins.billing.doc_no }}
+            </a>
+          {% else %}
+            <form method="post" action="{{ url_for('pages.installment_create_billing', inst_id=ins.id) }}">
+              <button class="btn btn-outline-dark w-100" type="submit" {% if ins.contract.status == "ยกเลิกสัญญา" %}disabled{% endif %}>
+                <i class="bi bi-plus-circle me-1"></i>สร้าง BL (ใบวางบิล/ใบแจ้งหนี้)
+              </button>
+            </form>
+          {% endif %}
+
+          <!-- TAX -->
+          {% if ins.tax_invoice %}
+            <a class="btn btn-outline-dark" href="{{ url_for('pages.tax_view', tax_id=ins.tax_invoice.id) }}">
+              <i class="bi bi-file-earmark-ruled me-1"></i>เปิด TAX: {{ ins.tax_invoice.doc_no }}
+            </a>
+          {% else %}
+            <form method="post" action="{{ url_for('pages.installment_create_tax', inst_id=ins.id) }}">
+              <button class="btn btn-outline-dark w-100" type="submit" {% if ins.contract.status == "ยกเลิกสัญญา" %}disabled{% endif %}>
+                <i class="bi bi-plus-circle me-1"></i>สร้าง TAX (ใบกำกับภาษี)
+              </button>
+            </form>
+          {% endif %}
+
+          <!-- RC -->
+          {% if ins.receipt %}
+            <a class="btn btn-outline-dark" href="{{ url_for('pages.receipt_view', receipt_id=ins.receipt.id) }}">
+              <i class="bi bi-cash-coin me-1"></i>เปิด RC: {{ ins.receipt.doc_no }}
+            </a>
+          {% else %}
+            <form method="post" action="{{ url_for('pages.installment_create_receipt', inst_id=ins.id) }}">
+              <button class="btn btn-outline-dark w-100" type="submit" {% if ins.contract.status == "ยกเลิกสัญญา" %}disabled{% endif %}>
+                <i class="bi bi-plus-circle me-1"></i>สร้าง RC (ใบเสร็จรับเงิน)
+              </button>
+            </form>
+          {% endif %}
+
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+{% endblock %}

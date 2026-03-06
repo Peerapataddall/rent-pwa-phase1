@@ -1,0 +1,39 @@
+<div class="modal fade" id="modalProduct" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-box-seam me-2"></i>เพิ่มสินค้าเช่า</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">SKU</label>
+            <input class="form-control" id="p_sku">
+          </div>
+          <div class="col-md-8">
+            <label class="form-label">ชื่อสินค้า *</label>
+            <input class="form-control" id="p_name" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">หน่วย</label>
+            <input class="form-control" id="p_unit" value="ชิ้น">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">ราคาเช่า/วัน</label>
+            <input class="form-control text-end" id="p_rent" value="0">
+          </div>
+          <div class="col-12">
+            <label class="form-label">สเปค (optional)</label>
+            <textarea class="form-control" id="p_spec" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="text-danger small mt-2" id="p_err"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+        <button class="btn btn-primary" type="button" onclick="saveProduct()"><i class="bi bi-save me-1"></i>บันทึก</button>
+      </div>
+    </div>
+  </div>
+</div>

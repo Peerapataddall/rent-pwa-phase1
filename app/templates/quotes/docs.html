@@ -1,0 +1,125 @@
+<!-- app/templates/quotes/docs.html -->
+{% extends "base.html" %}
+{% set title = "BL / TAX / RC (จาก QT)" %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <div>
+    <h4 class="mb-0">เอกสาร BL / TAX / RC</h4>
+    <div class="text-secondary">
+      QT: <a href="{{ url_for('pages.quote_view', quote_id=q.id) }}">{{ q.doc_no }}</a>
+      · CT: <a href="{{ url_for('pages.contract_view', contract_id=c.id) }}">{{ c.doc_no }}</a>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary" href="{{ url_for('pages.quote_view', quote_id=q.id) }}">
+      <i class="bi bi-arrow-left me-1"></i>กลับไป QT
+    </a>
+    <a class="btn btn-outline-primary" href="{{ url_for('pages.quote_installments', quote_id=q.id) }}">
+      <i class="bi bi-calendar2-week me-1"></i>ไปที่งวด
+    </a>
+  </div>
+</div>
+
+<div class="card app-card shadow-sm">
+  <div class="card-body">
+    <div class="small text-secondary mb-3">
+      กติกา: 1 งวด → BL 1 ใบ / TAX 1 ใบ / RC 1 ใบ · RC ของงวด = เต็มจำนวนของงวดนั้น
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th style="width:90px">งวด</th>
+            <th style="width:140px">กำหนดชำระ</th>
+            <th class="text-end" style="width:160px">ยอดงวด</th>
+            <th style="width:140px">สถานะงวด</th>
+            <th class="text-end" style="width:220px">BL</th>
+            <th class="text-end" style="width:220px">TAX</th>
+            <th class="text-end" style="width:220px">RC</th>
+            <th class="text-end" style="width:140px">จัดการ</th>
+          </tr>
+        </thead>
+        <tbody>
+
+          {% for ins in c.installments %}
+            <tr>
+              <td class="fw-semibold">{{ ins.seq }}</td>
+              <td>{{ ins.due_date.strftime('%d/%m/%Y') if ins.due_date else '-' }}</td>
+              <td class="text-end fw-semibold">{{ "{:,.2f}".format(ins.amount or 0) }}</td>
+              <td>
+                {% if ins.status == "ชำระแล้ว" %}
+                  <span class="badge bg-success">ชำระแล้ว</span>
+                {% else %}
+                  <span class="badge bg-secondary">ยังไม่ชำระ</span>
+                {% endif %}
+              </td>
+
+              <!-- BL -->
+              <td class="text-end">
+                {% if ins.billing %}
+                  <a class="btn btn-sm btn-outline-dark" href="{{ url_for('pages.billing_view', billing_id=ins.billing.id) }}">
+                    {{ ins.billing.doc_no }}
+                  </a>
+                {% else %}
+                  <form method="post" action="{{ url_for('pages.installment_create_billing', inst_id=ins.id) }}" class="d-inline">
+                    <button class="btn btn-sm btn-outline-primary" type="submit">
+                      <i class="bi bi-plus-circle me-1"></i>สร้าง BL
+                    </button>
+                  </form>
+                {% endif %}
+              </td>
+
+              <!-- TAX -->
+              <td class="text-end">
+                {% if ins.tax_invoice %}
+                  <a class="btn btn-sm btn-outline-dark" href="{{ url_for('pages.tax_view', tax_id=ins.tax_invoice.id) }}">
+                    {{ ins.tax_invoice.doc_no }}
+                  </a>
+                {% else %}
+                  <form method="post" action="{{ url_for('pages.installment_create_tax', inst_id=ins.id) }}" class="d-inline">
+                    <button class="btn btn-sm btn-outline-primary" type="submit">
+                      <i class="bi bi-plus-circle me-1"></i>สร้าง TAX
+                    </button>
+                  </form>
+                {% endif %}
+              </td>
+
+              <!-- RC -->
+              <td class="text-end">
+                {% if ins.receipt %}
+                  <a class="btn btn-sm btn-outline-dark" href="{{ url_for('pages.receipt_view', receipt_id=ins.receipt.id) }}">
+                    {{ ins.receipt.doc_no }}
+                  </a>
+                {% else %}
+                  <form method="post" action="{{ url_for('pages.installment_create_receipt', inst_id=ins.id) }}" class="d-inline">
+                    <button class="btn btn-sm btn-outline-primary" type="submit">
+                      <i class="bi bi-plus-circle me-1"></i>สร้าง RC
+                    </button>
+                  </form>
+                {% endif %}
+              </td>
+
+              <td class="text-end">
+                <a class="btn btn-sm btn-outline-primary" href="{{ url_for('pages.installment_view', inst_id=ins.id) }}">
+                  <i class="bi bi-eye me-1"></i>งวดนี้
+                </a>
+              </td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="8" class="text-center text-secondary py-4">
+                ยังไม่มีงวด (ไปหน้า CT แล้วกด “สร้างงวดอัตโนมัติ”)
+              </td>
+            </tr>
+          {% endfor %}
+
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

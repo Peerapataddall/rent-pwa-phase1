@@ -1,0 +1,941 @@
+{# app/templates/quotes/form.html #}
+{% extends "base.html" %}
+{% set title = "สร้างใบเสนอราคา (เช่า)" if mode=="new" else "แก้ไขใบเสนอราคา (เช่า)" %}
+{% block content %}
+
+{# รองรับทั้งคำว่า "อนุมัติแล้ว" (ของเดิม) และ "อนุมัติ" (ที่เราใช้ในรอบก่อน) #}
+{% set is_locked = (q and (q.status in ["อนุมัติแล้ว","อนุมัติ"])) %}
+
+<form method="post" id="qtForm">
+  <div class="row g-3">
+    <!-- LEFT -->
+    <div class="col-12 col-xl-8">
+
+      {% if is_locked %}
+      <div class="alert alert-success d-flex align-items-center gap-2">
+        <i class="bi bi-lock-fill"></i>
+        <div>
+          เอกสารถูก <b>อนุมัติแล้ว</b> และถูกล็อก ไม่สามารถแก้ไขได้
+          {% if q.approved_at %}
+            <span class="text-secondary">· อนุมัติเมื่อ {{ q.approved_at.strftime("%d/%m/%Y %H:%M") }}</span>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="card app-card shadow-sm mb-3">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+            <div>
+              <h4 class="mb-1">{{ "สร้างใบเสนอราคา (เช่า)" if mode=="new" else "แก้ไขใบเสนอราคา (เช่า)" }}</h4>
+              <div class="text-secondary small">
+                สถานะ:
+                <span class="badge {{ 'text-bg-success' if is_locked else 'text-bg-secondary' }}">
+                  {{ "อนุมัติ" if is_locked else "ร่าง" }}
+                </span>
+              </div>
+            </div>
+
+            <div class="d-flex gap-2">
+              <a class="btn btn-outline-secondary" href="{{ url_for('pages.quote_list') }}">
+                <i class="bi bi-arrow-left me-1"></i>กลับ
+              </a>
+
+              {% if not is_locked %}
+                <button class="btn btn-primary" type="submit">
+                  <i class="bi bi-save me-1"></i>บันทึก
+                </button>
+              {% else %}
+                <button class="btn btn-primary" type="button" disabled>
+                  <i class="bi bi-save me-1"></i>บันทึก
+                </button>
+              {% endif %}
+            </div>
+          </div>
+
+          <hr class="my-3">
+
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">วันที่เอกสาร</label>
+              <input class="form-control" type="date" name="doc_date"
+                     value="{{ q.doc_date.isoformat() if q and q.doc_date else '' }}"
+                     {{ "disabled" if is_locked else "" }}>
+            </div>
+
+            <div class="col-md-8">
+              <label class="form-label d-flex align-items-center justify-content-between">
+                <span>ลูกค้า</span>
+
+                {% if not is_locked %}
+                <button type="button"
+                        class="btn btn-sm btn-outline-primary"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalCustomer"
+                        onclick="prepareCustomerModal('{{ request.full_path }}')">
+                  <i class="bi bi-person-plus me-1"></i>เพิ่มลูกค้า
+                </button>
+                {% endif %}
+              </label>
+
+              {# =========================
+                 Customer: searchable dropdown (inside dropdown)
+                 ========================= #}
+              {% set current_customer_name = "" %}
+              {% if q and q.customer %}
+                {% set current_customer_name = q.customer.name %}
+              {% endif %}
+
+              <input type="hidden" name="customer_id" id="customerId" value="{{ q.customer_id if q else '' }}">
+
+              <div class="dropdown w-100">
+                <button
+                  class="btn btn-outline-secondary w-100 d-flex justify-content-between align-items-center"
+                  type="button"
+                  id="customerDropdownBtn"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                  {{ "disabled" if is_locked else "" }}
+                >
+                  <span id="customerDropdownLabel">
+                    {{ current_customer_name if current_customer_name else "-- เลือกลูกค้า --" }}
+                  </span>
+                  <i class="bi bi-caret-down-fill"></i>
+                </button>
+
+                <div class="dropdown-menu w-100 p-2" aria-labelledby="customerDropdownBtn" style="max-height: 320px; overflow:auto;">
+                  <input
+                    type="text"
+                    class="form-control mb-2"
+                    id="customerDropdownSearch"
+                    placeholder="ค้นหาชื่อลูกค้า..."
+                    autocomplete="off"
+                    {{ "disabled" if is_locked else "" }}
+                  >
+
+                  <div id="customerDropdownList">
+                    {% for c in customers %}
+                      <button
+                        type="button"
+                        class="dropdown-item customer-item"
+                        data-id="{{ c.id }}"
+                        data-name="{{ c.name }}"
+                      >
+                        {{ c.name }}
+                      </button>
+                    {% endfor %}
+                  </div>
+
+                  <div class="dropdown-divider"></div>
+                  <button type="button" class="dropdown-item text-secondary" id="customerClearBtn">
+                    ล้างการเลือก
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">วันที่เริ่มเช่า</label>
+              <input class="form-control" type="date" name="rent_start"
+                     value="{{ q.rent_start.isoformat() if q and q.rent_start else '' }}"
+                     {{ "disabled" if is_locked else "" }}>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">วันที่สิ้นสุดเช่า</label>
+              <input class="form-control" type="date" name="rent_end"
+                     value="{{ q.rent_end.isoformat() if q and q.rent_end else '' }}"
+                     {{ "disabled" if is_locked else "" }}>
+            </div>
+
+            <div class="col-md-12">
+              <label class="form-label">พื้นที่โครงการ</label>
+              <input class="form-control" name="project_site"
+                     value="{{ q.project_site if q else '' }}"
+                     {{ "disabled" if is_locked else "" }}>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">VAT Mode</label>
+              <select class="form-select" name="vat_mode" id="vatMode" {{ "disabled" if is_locked else "" }}>
+                {% set cur = (q.vat_mode if q else 'EXCLUDED') %}
+                <option value="EXCLUDED" {{ "selected" if cur=='EXCLUDED' else "" }}>EXCLUDED (แยก VAT)</option>
+                <option value="INCLUDED" {{ "selected" if cur=='INCLUDED' else "" }}>INCLUDED (รวม VAT)</option>
+                <option value="NONE" {{ "selected" if cur=='NONE' else "" }}>NONE (ไม่คิด VAT)</option>
+              </select>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">VAT Rate (%)</label>
+              <input class="form-control text-end calc" name="vat_rate" id="vatRate"
+                     value="{{ (q.vat_rate if q else 7.00) }}"
+                     {{ "disabled" if is_locked else "" }}>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">หัก ณ ที่จ่าย (%)</label>
+              <select class="form-select" name="wht_percent" id="whtPercent" {{ "disabled" if is_locked else "" }}>
+                {% set curw = (q.wht_percent if q else 0) %}
+                <option value="0" {{ "selected" if curw==0 else "" }}>0%</option>
+                <option value="1" {{ "selected" if curw==1 else "" }}>1%</option>
+                <option value="3" {{ "selected" if curw==3 else "" }}>3%</option>
+                <option value="5" {{ "selected" if curw==5 else "" }}>5%</option>
+              </select>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">มัดจำเพิ่ม (ทั้งใบ)</label>
+              <input class="form-control text-end calc" id="depositExtra"
+                     name="deposit_extra"
+                     value="{{ (q.deposit_extra if q else 0) }}"
+                     {{ "disabled" if is_locked else "" }}>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">หมายเหตุ</label>
+              <textarea class="form-control" name="remark" rows="2"
+                        {{ "disabled" if is_locked else "" }}>{{ q.remark if q else "" }}</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card app-card shadow-sm">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div>
+              <h5 class="mb-0"><i class="bi bi-box-seam me-2"></i>รายการสินค้าเช่า</h5>
+              <div class="small text-secondary">ราคา/วัน × จำนวนวัน × จำนวน = รวม · มัดจำต่อรายการกรอกได้</div>
+            </div>
+
+            <div class="d-flex gap-2">
+              {% if not is_locked %}
+              <button type="button" class="btn btn-sm btn-outline-primary"
+                      data-bs-toggle="modal" data-bs-target="#modalProduct" title="เพิ่มสินค้า">
+                <i class="bi bi-box-seam me-1"></i>เพิ่มสินค้า
+              </button>
+
+              <button type="button" class="btn btn-sm btn-outline-primary" onclick="addLine()">
+                <i class="bi bi-plus-lg me-1"></i>เพิ่มรายการ
+              </button>
+              {% else %}
+              <button type="button" class="btn btn-sm btn-outline-primary" disabled>
+                <i class="bi bi-box-seam me-1"></i>เพิ่มสินค้า
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-primary" disabled>
+                <i class="bi bi-plus-lg me-1"></i>เพิ่มรายการ
+              </button>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table align-middle" id="linesTable">
+              <thead class="table-light">
+                <tr>
+                  <th style="min-width:320px">สินค้า</th>
+                  <th style="width:110px" class="text-end">จำนวน</th>
+                  <th style="width:110px" class="text-end">วัน</th>
+                  <th style="width:170px" class="text-end">ราคา/วัน</th>
+                  <th style="width:170px" class="text-end">มัดจำ/รายการ</th>
+                  <th style="width:170px" class="text-end">รวม</th>
+                  <th style="width:60px"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% if q and q.lines %}
+                  {% for ln in q.lines %}
+                    {% set ln_prod_name = ln.product.name if ln.product else "" %}
+                    <tr>
+                      <td>
+                        <div class="d-flex gap-2">
+                          <input type="hidden" class="productId" name="product_id" value="{{ ln.product_id }}" {{ "disabled" if is_locked else "" }}>
+
+                          <div class="dropdown w-100 productDropdown">
+                            <button class="btn btn-outline-secondary w-100 d-flex justify-content-between align-items-center productDropdownBtn"
+                                    type="button" data-bs-toggle="dropdown" aria-expanded="false"
+                                    {{ "disabled" if is_locked else "" }}>
+                              <span class="productDropdownLabel">{{ ln_prod_name if ln_prod_name else "-- เลือกสินค้า --" }}</span>
+                              <i class="bi bi-caret-down-fill"></i>
+                            </button>
+
+                            <div class="dropdown-menu w-100 p-2" style="max-height: 320px; overflow:auto;">
+                              <input type="text" class="form-control mb-2 productDropdownSearch" placeholder="ค้นหาสินค้า..." autocomplete="off"
+                                     {{ "disabled" if is_locked else "" }}>
+
+                              <div class="productDropdownList">
+                                {% for p in products %}
+                                  <button type="button" class="dropdown-item product-item"
+                                          data-id="{{ p.id }}"
+                                          data-name="{{ p.name }}"
+                                          data-price="{{ p.rent_price_per_day }}">
+                                    {{ p.name }}
+                                  </button>
+                                {% endfor %}
+                              </div>
+
+                              <div class="dropdown-divider"></div>
+                              <button type="button" class="dropdown-item text-secondary productClearBtn">ล้างการเลือก</button>
+                            </div>
+                          </div>
+
+                          <button type="button" class="btn btn-outline-primary"
+                                  data-bs-toggle="modal" data-bs-target="#modalProduct" title="เพิ่มสินค้า"
+                                  onclick="setProductModalTarget(this)"
+                                  {{ "disabled" if is_locked else "" }}>
+                            <i class="bi bi-plus-lg"></i>
+                          </button>
+                        </div>
+                      </td>
+
+                      <td><input class="form-control text-end calc qty" name="qty" value="{{ ln.qty }}" {{ "disabled" if is_locked else "" }}></td>
+                      <td><input class="form-control text-end calc days" name="days" value="{{ ln.days }}" {{ "disabled" if is_locked else "" }}></td>
+                      <td><input class="form-control text-end calc price" name="price" value="{{ ln.price }}" {{ "disabled" if is_locked else "" }}></td>
+                      <td><input class="form-control text-end calc deposit" name="deposit" value="{{ ln.deposit }}" {{ "disabled" if is_locked else "" }}></td>
+                      <td class="text-end fw-semibold lineTotal">0.00</td>
+
+                      <td class="text-end">
+                        {% if not is_locked %}
+                          <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeLine(this)">
+                            <i class="bi bi-x-lg"></i>
+                          </button>
+                        {% else %}
+                          <button type="button" class="btn btn-sm btn-outline-danger" disabled>
+                            <i class="bi bi-x-lg"></i>
+                          </button>
+                        {% endif %}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                {% else %}
+                  {% if not is_locked %}
+                    {# ✅ เข้ามาใหม่ให้มี 3 แถวทันที #}
+                    {% for i in range(3) %}
+                    <tr>
+                      <td>
+                        <div class="d-flex gap-2">
+                          <input type="hidden" class="productId" name="product_id" value="">
+
+                          <div class="dropdown w-100 productDropdown">
+                            <button class="btn btn-outline-secondary w-100 d-flex justify-content-between align-items-center productDropdownBtn"
+                                    type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                              <span class="productDropdownLabel">-- เลือกสินค้า --</span>
+                              <i class="bi bi-caret-down-fill"></i>
+                            </button>
+
+                            <div class="dropdown-menu w-100 p-2" style="max-height: 320px; overflow:auto;">
+                              <input type="text" class="form-control mb-2 productDropdownSearch" placeholder="ค้นหาสินค้า..." autocomplete="off">
+
+                              <div class="productDropdownList">
+                                {% for p in products %}
+                                  <button type="button" class="dropdown-item product-item"
+                                          data-id="{{ p.id }}"
+                                          data-name="{{ p.name }}"
+                                          data-price="{{ p.rent_price_per_day }}">
+                                    {{ p.name }}
+                                  </button>
+                                {% endfor %}
+                              </div>
+
+                              <div class="dropdown-divider"></div>
+                              <button type="button" class="dropdown-item text-secondary productClearBtn">ล้างการเลือก</button>
+                            </div>
+                          </div>
+
+                          <button type="button" class="btn btn-outline-primary"
+                                  data-bs-toggle="modal" data-bs-target="#modalProduct" title="เพิ่มสินค้า"
+                                  onclick="setProductModalTarget(this)">
+                            <i class="bi bi-plus-lg"></i>
+                          </button>
+                        </div>
+                      </td>
+                      <td><input class="form-control text-end calc qty" name="qty" value="1"></td>
+                      <td><input class="form-control text-end calc days" name="days" value="1"></td>
+                      <td><input class="form-control text-end calc price" name="price" value="0"></td>
+                      <td><input class="form-control text-end calc deposit" name="deposit" value="0"></td>
+                      <td class="text-end fw-semibold lineTotal">0.00</td>
+                      <td class="text-end">
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeLine(this)">
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  {% endif %}
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="small text-secondary mt-2">
+            WHT คิดจาก “ยอดสินค้า (ก่อน VAT)” ตามสเปค
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT -->
+    <div class="col-12 col-xl-4">
+      <div class="card app-card shadow-sm sticky-summary">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between">
+            <h5 class="mb-0"><i class="bi bi-receipt me-2"></i>สรุปยอด</h5>
+            <span class="badge text-bg-primary-subtle text-primary-emphasis">Live</span>
+          </div>
+          <hr class="my-3">
+
+          <div class="summary-row">
+            <div class="text-secondary">ยอดสินค้า (ก่อน VAT)</div>
+            <div class="fw-semibold" id="sumSubtotal">0.00</div>
+          </div>
+          <div class="summary-row">
+            <div class="text-secondary">VAT</div>
+            <div class="fw-semibold" id="sumVat">0.00</div>
+          </div>
+          <div class="summary-row">
+            <div class="text-secondary">ค่าของรวมภาษี</div>
+            <div class="fw-semibold" id="sumInclVat">0.00</div>
+          </div>
+
+          <hr class="my-2">
+
+          <div class="summary-row">
+            <div class="text-secondary">หัก ณ ที่จ่าย</div>
+            <div class="fw-semibold text-danger" id="sumWht">-0.00</div>
+          </div>
+
+          <div class="summary-row big">
+            <div class="text-secondary">ยอดชำระสุทธิ</div>
+            <div class="fw-bold" id="sumNet">0.00</div>
+          </div>
+
+          <hr class="my-2">
+
+          <div class="summary-row">
+            <div class="text-secondary">มัดจำ (รวมจากรายการ)</div>
+            <div class="fw-semibold text-info" id="sumDepositLines">0.00</div>
+          </div>
+
+          <div class="summary-row">
+            <div class="text-secondary">มัดจำเพิ่ม (ทั้งใบ)</div>
+            <div class="fw-semibold text-info" id="sumDepositExtra">0.00</div>
+          </div>
+
+          <div class="summary-row big mt-2">
+            <div class="text-secondary">มัดจำรวมทั้งหมด</div>
+            <div class="fw-bold text-info" id="sumDepositTotal">0.00</div>
+          </div>
+
+          <div class="mt-3 d-grid gap-2">
+            {% if not is_locked %}
+              <button class="btn btn-primary" type="submit">
+                <i class="bi bi-save me-1"></i>บันทึกเอกสาร
+              </button>
+            {% else %}
+              <button class="btn btn-primary" type="button" disabled>
+                <i class="bi bi-save me-1"></i>บันทึกเอกสาร
+              </button>
+            {% endif %}
+
+            <a class="btn btn-outline-secondary" href="{{ url_for('pages.quote_list') }}">
+              <i class="bi bi-x-circle me-1"></i>ยกเลิก
+            </a>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+</form>
+
+{% include "customers/form_modal.html" %}
+{% include "products/form_modal.html" %}
+
+{% endblock %}
+
+{% block page_js %}
+<script>
+const IS_LOCKED = {{ 'true' if is_locked else 'false' }};
+
+function toNum(v){
+  const n = parseFloat(String(v ?? "").replace(/,/g,''));
+  return isNaN(n) ? 0 : n;
+}
+function fmt(n){
+  try {
+    return (Math.round(n*100)/100).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  } catch(e){
+    return (Math.round(n*100)/100).toFixed(2);
+  }
+}
+
+/* =========================
+   Customer dropdown search + select
+   ========================= */
+(function () {
+  const btn = document.getElementById("customerDropdownBtn");
+  const label = document.getElementById("customerDropdownLabel");
+  const hidden = document.getElementById("customerId");
+  const search = document.getElementById("customerDropdownSearch");
+  const list = document.getElementById("customerDropdownList");
+  const clearBtn = document.getElementById("customerClearBtn");
+
+  if (!btn || !label || !hidden || !search || !list) return;
+
+  function norm(s) { return String(s || "").toLowerCase().trim(); }
+
+  function filterItems() {
+    const q = norm(search.value);
+    list.querySelectorAll(".customer-item").forEach((it) => {
+      const name = norm(it.getAttribute("data-name"));
+      it.style.display = q && !name.includes(q) ? "none" : "";
+    });
+  }
+
+  btn.addEventListener("shown.bs.dropdown", () => {
+    search.value = "";
+    filterItems();
+    search.focus();
+  });
+
+  search.addEventListener("input", filterItems);
+
+  list.addEventListener("click", (e) => {
+    const item = e.target.closest(".customer-item");
+    if (!item) return;
+
+    const id = item.getAttribute("data-id");
+    const name = item.getAttribute("data-name");
+    hidden.value = id;
+    label.textContent = name;
+
+    const dd = bootstrap.Dropdown.getOrCreateInstance(btn);
+    dd.hide();
+  });
+
+  if (clearBtn) {
+    clearBtn.addEventListener("click", () => {
+      hidden.value = "";
+      label.textContent = "-- เลือกลูกค้า --";
+      search.value = "";
+      filterItems();
+    });
+  }
+
+  // helper: add customer option instantly
+  window.__addCustomerToDropdown = function(id, name, autoSelect=true){
+    if(!id || !name) return;
+
+    // กันซ้ำ
+    const exists = list.querySelector(`.customer-item[data-id="${id}"]`);
+    if(!exists){
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "dropdown-item customer-item";
+      b.dataset.id = String(id);
+      b.dataset.name = String(name);
+      b.textContent = String(name);
+      list.prepend(b);
+    }
+
+    if(autoSelect){
+      hidden.value = id;
+      label.textContent = name;
+    }
+  }
+})();
+
+/* =========================
+   Product dropdown (per-row) + auto price
+   ========================= */
+window.__productModalTargetRow = null;
+
+function setProductModalTarget(btn){
+  const tr = btn?.closest("tr");
+  window.__productModalTargetRow = tr || null;
+}
+
+function initProductDropdownRow(root){
+  if(!root) return;
+
+  const btn = root.querySelector(".productDropdownBtn");
+  const label = root.querySelector(".productDropdownLabel");
+  const hidden = root.querySelector(".productId");
+  const search = root.querySelector(".productDropdownSearch");
+  const listWrap = root.querySelector(".productDropdownList");
+  const clearBtn = root.querySelector(".productClearBtn");
+
+  if(!btn || !label || !hidden || !search || !listWrap) return;
+
+  function norm(s){ return String(s || "").toLowerCase().trim(); }
+
+  function filterItems(){
+    const q = norm(search.value);
+    listWrap.querySelectorAll(".product-item").forEach((it) => {
+      const name = norm(it.getAttribute("data-name"));
+      it.style.display = q && !name.includes(q) ? "none" : "";
+    });
+  }
+
+  btn.addEventListener("shown.bs.dropdown", () => {
+    search.value = "";
+    filterItems();
+    search.focus();
+  });
+
+  search.addEventListener("input", filterItems);
+
+  listWrap.addEventListener("click", (e) => {
+    const item = e.target.closest(".product-item");
+    if(!item) return;
+
+    const id = item.getAttribute("data-id");
+    const name = item.getAttribute("data-name");
+    const price = item.getAttribute("data-price");
+
+    hidden.value = id || "";
+    label.textContent = name || "-- เลือกสินค้า --";
+
+    const priceInput = root.querySelector(".price");
+    if(priceInput && toNum(priceInput.value) === 0 && price){
+      priceInput.value = price;
+    }
+
+    const dd = bootstrap.Dropdown.getOrCreateInstance(btn);
+    dd.hide();
+
+    calcSummary();
+  });
+
+  if(clearBtn){
+    clearBtn.addEventListener("click", () => {
+      hidden.value = "";
+      label.textContent = "-- เลือกสินค้า --";
+      search.value = "";
+      filterItems();
+      calcSummary();
+    });
+  }
+}
+
+// helper: append new product to ALL rows instantly
+window.__addProductToAllDropdowns = function(p){
+  if(!p) return;
+  const id = p.id ?? p.product_id ?? p.data?.id;
+  const name = p.name ?? p.product_name ?? p.data?.name;
+  const price = p.rent_price_per_day ?? p.price_day ?? p.price ?? p.data?.rent_price_per_day ?? p.data?.price_day ?? "";
+
+  if(!id || !name) return;
+
+  document.querySelectorAll(".productDropdownList").forEach((listWrap) => {
+    const exists = listWrap.querySelector(`.product-item[data-id="${id}"]`);
+    if(exists) return;
+
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "dropdown-item product-item";
+    b.dataset.id = String(id);
+    b.dataset.name = String(name);
+    b.dataset.price = String(price ?? "");
+    b.textContent = String(name);
+    listWrap.prepend(b);
+  });
+};
+
+// helper: select product in a row instantly
+window.__selectProductInRow = function(tr, p){
+  if(!tr || !p) return;
+  const id = p.id ?? p.product_id ?? p.data?.id;
+  const name = p.name ?? p.product_name ?? p.data?.name;
+  const price = p.rent_price_per_day ?? p.price_day ?? p.price ?? p.data?.rent_price_per_day ?? p.data?.price_day ?? "";
+
+  const hidden = tr.querySelector(".productId");
+  const label = tr.querySelector(".productDropdownLabel");
+  const priceInput = tr.querySelector(".price");
+  if(hidden) hidden.value = id || "";
+  if(label) label.textContent = name || "-- เลือกสินค้า --";
+  if(priceInput && toNum(priceInput.value) === 0 && price !== null && price !== undefined){
+    priceInput.value = price;
+  }
+  calcSummary();
+};
+
+function removeLine(btn){
+  if(IS_LOCKED) return;
+  btn.closest('tr').remove();
+  calcSummary();
+}
+
+function addLine(){
+  if(IS_LOCKED) return;
+
+  const tbody = document.querySelector("#linesTable tbody");
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td>
+      <div class="d-flex gap-2">
+        <input type="hidden" class="productId" name="product_id" value="">
+        <div class="dropdown w-100 productDropdown">
+          <button class="btn btn-outline-secondary w-100 d-flex justify-content-between align-items-center productDropdownBtn"
+                  type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <span class="productDropdownLabel">-- เลือกสินค้า --</span>
+            <i class="bi bi-caret-down-fill"></i>
+          </button>
+
+          <div class="dropdown-menu w-100 p-2" style="max-height: 320px; overflow:auto;">
+            <input type="text" class="form-control mb-2 productDropdownSearch"
+                   placeholder="ค้นหาสินค้า..." autocomplete="off">
+
+            <div class="productDropdownList">
+              {% for p in products %}
+                <button type="button"
+                        class="dropdown-item product-item"
+                        data-id="{{ p.id }}"
+                        data-name="{{ p.name }}"
+                        data-price="{{ p.rent_price_per_day }}">
+                  {{ p.name }}
+                </button>
+              {% endfor %}
+            </div>
+
+            <div class="dropdown-divider"></div>
+            <button type="button" class="dropdown-item text-secondary productClearBtn">ล้างการเลือก</button>
+          </div>
+        </div>
+
+        <button type="button" class="btn btn-outline-primary"
+                data-bs-toggle="modal" data-bs-target="#modalProduct" title="เพิ่มสินค้า"
+                onclick="setProductModalTarget(this)">
+          <i class="bi bi-plus-lg"></i>
+        </button>
+      </div>
+    </td>
+    <td><input class="form-control text-end calc qty" name="qty" value="1"></td>
+    <td><input class="form-control text-end calc days" name="days" value="1"></td>
+    <td><input class="form-control text-end calc price" name="price" value="0"></td>
+    <td><input class="form-control text-end calc deposit" name="deposit" value="0"></td>
+    <td class="text-end fw-semibold lineTotal">0.00</td>
+    <td class="text-end">
+      <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeLine(this)">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </td>
+  `;
+  tbody.appendChild(tr);
+
+  hookRow(tr);
+  calcSummary();
+}
+
+function calcSummary(){
+  let sumLine = 0;
+  let depositLines = 0;
+
+  document.querySelectorAll("#linesTable tbody tr").forEach(tr => {
+    const qty = toNum(tr.querySelector(".qty")?.value);
+    const days = toNum(tr.querySelector(".days")?.value || 1);
+    const price = toNum(tr.querySelector(".price")?.value);
+    const dep = toNum(tr.querySelector(".deposit")?.value);
+
+    const lineTotal = qty * days * price;
+    sumLine += lineTotal;
+    depositLines += dep;
+
+    const cell = tr.querySelector(".lineTotal");
+    if(cell) cell.textContent = fmt(lineTotal);
+  });
+
+  const vatMode = document.getElementById("vatMode")?.value || "EXCLUDED";
+  const vatRate = toNum(document.getElementById("vatRate")?.value || 7) / 100.0;
+
+  let subtotalBase = sumLine;
+  let vat = 0;
+  let inclVat = 0;
+
+  if(vatMode === "NONE"){
+    vat = 0;
+    inclVat = sumLine;
+    subtotalBase = sumLine;
+  } else if(vatMode === "INCLUDED"){
+    inclVat = sumLine;
+    subtotalBase = vatRate ? (sumLine / (1 + vatRate)) : sumLine;
+    vat = inclVat - subtotalBase;
+  } else {
+    subtotalBase = sumLine;
+    vat = sumLine * vatRate;
+    inclVat = sumLine + vat;
+  }
+
+  const whtPct = toNum(document.getElementById("whtPercent")?.value || 0) / 100.0;
+  const wht = subtotalBase * whtPct;
+  const net = inclVat - wht;
+
+  const extra = toNum(document.getElementById("depositExtra")?.value || 0);
+  const depositTotal = depositLines + extra;
+
+  document.getElementById("sumSubtotal").textContent = fmt(subtotalBase);
+  document.getElementById("sumVat").textContent = fmt(vat);
+  document.getElementById("sumInclVat").textContent = fmt(inclVat);
+  document.getElementById("sumWht").textContent = "-" + fmt(wht);
+  document.getElementById("sumNet").textContent = fmt(net);
+
+  document.getElementById("sumDepositLines").textContent = fmt(depositLines);
+  const extraEl = document.getElementById("sumDepositExtra");
+  if (extraEl) extraEl.textContent = fmt(extra);
+  document.getElementById("sumDepositTotal").textContent = fmt(depositTotal);
+}
+
+function hookRow(root){
+  if(IS_LOCKED) return;
+
+  root.querySelectorAll(".calc").forEach(el => {
+    el.addEventListener("input", calcSummary);
+    el.addEventListener("change", calcSummary);
+  });
+
+  initProductDropdownRow(root);
+}
+
+// init existing rows
+document.querySelectorAll("#linesTable tbody tr").forEach(tr => hookRow(tr));
+
+document.getElementById("vatMode")?.addEventListener("change", calcSummary);
+document.getElementById("vatRate")?.addEventListener("input", calcSummary);
+document.getElementById("whtPercent")?.addEventListener("change", calcSummary);
+document.getElementById("depositExtra")?.addEventListener("input", calcSummary);
+document.getElementById("depositExtra")?.addEventListener("change", calcSummary);
+
+calcSummary();
+
+/* =========================
+   ✅ MODAL SAVE (no refresh)
+   - intercept form submit in modalCustomer/modalProduct
+   ========================= */
+async function submitModalForm(modalId, fallbackUrl){
+  const modalEl = document.getElementById(modalId);
+  if(!modalEl) return;
+
+  const form = modalEl.querySelector("form");
+  if(!form) return;
+
+  form.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+
+    const url = form.getAttribute("action") || fallbackUrl;
+    const method = (form.getAttribute("method") || "POST").toUpperCase();
+
+    const fd = new FormData(form);
+
+    // ถ้ามีปุ่ม submit หลายปุ่ม บางครั้งต้องส่งชื่อปุ่มด้วย (กันหลุด)
+    // แต่ถ้าไม่จำเป็นก็ไม่เป็นไร
+
+    let resp, data;
+    try{
+      resp = await fetch(url, { method, body: fd });
+      data = await resp.json().catch(() => ({}));
+    }catch(err){
+      alert("บันทึกไม่สำเร็จ (เช็ค network/console)");
+      return;
+    }
+
+    if(!resp.ok){
+      const msg = data?.message || data?.error || "บันทึกไม่สำเร็จ";
+      alert(msg);
+      return;
+    }
+
+    // success → close modal
+    const instance = bootstrap.Modal.getInstance(modalEl);
+    if(instance) instance.hide();
+
+    return data;
+  }, { once: true });
+}
+
+// Customers: after success update dropdown instantly + auto select
+(function(){
+  const modalEl = document.getElementById("modalCustomer");
+  if(!modalEl) return;
+  const form = modalEl.querySelector("form");
+  if(!form) return;
+
+  form.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+
+    const url = form.getAttribute("action") || "/api/customers";
+    const method = (form.getAttribute("method") || "POST").toUpperCase();
+    const fd = new FormData(form);
+
+    let resp, data;
+    try{
+      resp = await fetch(url, { method, body: fd });
+      data = await resp.json().catch(() => ({}));
+    }catch(err){
+      alert("บันทึกลูกค้าไม่สำเร็จ (เช็ค network/console)");
+      return;
+    }
+
+    if(!resp.ok){
+      alert(data?.message || data?.error || "บันทึกลูกค้าไม่สำเร็จ");
+      return;
+    }
+
+    // close modal
+    const instance = bootstrap.Modal.getInstance(modalEl);
+    if(instance) instance.hide();
+
+    const id = data.id ?? data.customer_id ?? data.data?.id;
+    const name = data.name ?? data.customer_name ?? data.data?.name;
+    if(window.__addCustomerToDropdown) window.__addCustomerToDropdown(id, name, true);
+  });
+})();
+
+// Products: after success update ALL dropdowns instantly + auto select in target row (if any)
+(function(){
+  const modalEl = document.getElementById("modalProduct");
+  if(!modalEl) return;
+  const form = modalEl.querySelector("form");
+  if(!form) return;
+
+  form.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+
+    const url = form.getAttribute("action") || "/api/products";
+    const method = (form.getAttribute("method") || "POST").toUpperCase();
+    const fd = new FormData(form);
+
+    let resp, data;
+    try{
+      resp = await fetch(url, { method, body: fd });
+      data = await resp.json().catch(() => ({}));
+    }catch(err){
+      alert("บันทึกสินค้าไม่สำเร็จ (เช็ค network/console)");
+      return;
+    }
+
+    if(!resp.ok){
+      alert(data?.message || data?.error || "บันทึกสินค้าไม่สำเร็จ");
+      return;
+    }
+
+    // close modal
+    const instance = bootstrap.Modal.getInstance(modalEl);
+    if(instance) instance.hide();
+
+    // update all dropdown lists
+    if(window.__addProductToAllDropdowns) window.__addProductToAllDropdowns(data);
+
+    // select on target row (the row where user clicked +)
+    const tr = window.__productModalTargetRow;
+    if(tr && window.__selectProductInRow){
+      window.__selectProductInRow(tr, data);
+    }
+
+    // reset target
+    window.__productModalTargetRow = null;
+  });
+})();
+</script>
+{% endblock %}

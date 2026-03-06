@@ -1,0 +1,270 @@
+{# app/templates/quotes/view.html #}
+{% extends "base.html" %}
+{% set title = "ดูใบเสนอราคา" %}
+{% block content %}
+
+{# ===============================
+   ✅ Status normalize
+   - ระบบมีได้ทั้ง "อนุมัติ" และ "อนุมัติแล้ว"
+   =============================== #}
+{% set is_approved = (q.status in ["อนุมัติ", "อนุมัติแล้ว"]) %}
+{% set is_canceled = (q.status == "ยกเลิก") %}
+{% set is_draft = (not is_approved and not is_canceled) %}
+
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="mb-0">{{ q.doc_no }}</h4>
+    <div class="text-secondary">
+      วันที่: {{ q.doc_date.strftime("%d/%m/%Y") if q.doc_date else "-" }} · สถานะ:
+      {% if is_approved %}
+        <span class="badge bg-success">อนุมัติ</span>
+        {% if q.approved_at %}
+          · อนุมัติเมื่อ {{ q.approved_at.strftime("%d/%m/%Y %H:%M") }}
+        {% endif %}
+      {% elif is_canceled %}
+        <span class="badge bg-danger">ยกเลิก</span>
+        {% if q.canceled_at %}
+          · ยกเลิกเมื่อ {{ q.canceled_at.strftime("%d/%m/%Y %H:%M") }}
+        {% endif %}
+      {% else %}
+        <span class="badge bg-secondary">ร่าง</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 flex-wrap">
+
+    {% if is_draft %}
+      <a class="btn btn-outline-warning" href="{{ url_for('pages.quote_edit', quote_id=q.id) }}">
+        <i class="bi bi-pencil me-1"></i>Edit
+      </a>
+
+      <form method="POST" action="{{ url_for('pages.quote_approve', quote_id=q.id) }}" style="display:inline;">
+        <button type="submit" class="btn btn-success">
+          <i class="bi bi-check-circle me-1"></i> อนุมัติ
+        </button>
+      </form>
+
+      <form method="POST" action="{{ url_for('pages.quote_cancel', quote_id=q.id) }}" style="display:inline;">
+        <button type="submit" class="btn btn-outline-danger">
+          <i class="bi bi-x-circle me-1"></i> ยกเลิก
+        </button>
+      </form>
+    {% endif %}
+
+    <a class="btn btn-outline-secondary" href="{{ url_for('pages.quote_list') }}">
+      <i class="bi bi-arrow-left me-1"></i>กลับ
+    </a>
+
+    <button class="btn btn-outline-dark" disabled>
+      <i class="bi bi-printer me-1"></i>Print
+    </button>
+  </div>
+</div>
+
+{% if is_approved %}
+  <div class="card app-card shadow-sm mb-3">
+    <div class="card-body py-2">
+      <div class="d-flex flex-wrap gap-2 align-items-center">
+        <span class="text-secondary small me-2">หลังอนุมัติ: </span>
+
+        <a class="btn btn-sm btn-outline-primary" href="{{ url_for('pages.contract_from_quote', quote_id=q.id) }}">
+          <i class="bi bi-file-earmark-text me-1"></i> สัญญาเช่า
+        </a>
+
+        {% if q.contract and q.contract.installments %}
+          <a class="btn btn-sm btn-outline-primary" href="{{ url_for('pages.contract_view', contract_id=q.contract.id) }}#installments">
+            <i class="bi bi-calendar2-week me-1"></i> งวด
+          </a>
+        {% else %}
+          <span class="badge text-bg-light border">ยังไม่มีงวด</span>
+        {% endif %}
+
+        {% if q.contract %}
+          <span class="badge text-bg-light border">
+            CT: {{ q.contract.doc_no }}
+          </span>
+        {% endif %}
+
+        <span class="text-secondary small">(BL/TAX/RC จะผูกกับ “งวด” งวดละ 1 ใบ)</span>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+<div class="row g-3">
+
+  <!-- LEFT -->
+  <div class="col-12 col-xl-8">
+
+    <!-- HEADER INFO -->
+    <div class="card app-card shadow-sm mb-3">
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-md-6">
+            <div class="fw-semibold">ลูกค้า</div>
+            <div class="text-secondary">
+              {{ q.customer.name if q.customer else "-" }}
+              {% if q.customer %}
+                <a class="ms-2 small" href="{{ url_for('pages.customer_view', customer_id=q.customer.id) }}">
+                  ดูข้อมูลลูกค้า
+                </a>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="fw-semibold">พื้นที่โครงการ</div>
+            <div class="text-secondary">{{ q.project_site or '-' }}</div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="fw-semibold">วันที่เช่า</div>
+            <div class="text-secondary">
+              {{ q.rent_start.strftime("%d/%m/%Y") if q.rent_start else '-' }}
+              ถึง
+              {{ q.rent_end.strftime("%d/%m/%Y") if q.rent_end else '-' }}
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="fw-semibold">ภาษี</div>
+            <div class="text-secondary">
+              VAT: {{ q.vat_mode or "-" }} ({{ q.vat_rate or 0 }}%) ·
+              WHT: {{ q.wht_percent or 0 }}%
+            </div>
+          </div>
+
+          <div class="col-12">
+            <div class="fw-semibold">หมายเหตุ</div>
+            <div class="text-secondary">{{ q.remark or '-' }}</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ITEMS -->
+    <div class="card app-card shadow-sm">
+      <div class="table-responsive">
+        <table class="table mb-0 align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>สินค้า</th>
+              <th class="text-end">จำนวน</th>
+              <th class="text-end">วัน</th>
+              <th class="text-end">ราคา/วัน</th>
+              <th class="text-end">รวม</th>
+              <th class="text-end">มัดจำ</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for ln in q.lines %}
+              {% set calc_total = (ln.qty or 0) * (ln.days or 0) * (ln.price or 0) %}
+              {% set show_total = (ln.line_total if (ln.line_total and ln.line_total != 0) else calc_total) %}
+              <tr>
+                <td>{{ ln.product.name if ln.product else (ln.product_name or '-') }}</td>
+                <td class="text-end">{{ "{:,.2f}".format(ln.qty or 0) }}</td>
+                <td class="text-end">{{ ln.days or 0 }}</td>
+                <td class="text-end">{{ "{:,.2f}".format(ln.price or 0) }}</td>
+                <td class="text-end">{{ "{:,.2f}".format(show_total or 0) }}</td>
+                <td class="text-end text-primary">
+                  {{ "{:,.2f}".format(ln.deposit or 0) }}
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="6" class="text-center text-secondary py-4">
+                  ไม่มีรายการ
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT SUMMARY -->
+  <div class="col-12 col-xl-4">
+    <div class="card app-card shadow-sm sticky-summary">
+      <div class="card-body">
+
+        <h5 class="mb-3">
+          <i class="bi bi-receipt me-2 text-primary"></i>สรุปยอด
+        </h5>
+
+        <div class="summary-row">
+          <div>ยอดสินค้า (ก่อน VAT)</div>
+          <div class="fw-semibold">
+            {{ "{:,.2f}".format(q.subtotal or 0) }}
+          </div>
+        </div>
+
+        <div class="summary-row">
+          <div>VAT</div>
+          <div class="fw-semibold">
+            {{ "{:,.2f}".format(q.vat_amount or 0) }}
+          </div>
+        </div>
+
+        <div class="summary-row">
+          <div>ค่าของรวมภาษี</div>
+          <div class="fw-semibold">
+            {{ "{:,.2f}".format(q.total_incl_vat or 0) }}
+          </div>
+        </div>
+
+        <hr>
+
+        <div class="summary-row">
+          <div>หัก ณ ที่จ่าย</div>
+          <div class="fw-semibold text-danger">
+            - {{ "{:,.2f}".format(q.wht_amount or 0) }}
+          </div>
+        </div>
+
+        <div class="summary-row big">
+          <div>ยอดชำระสุทธิ</div>
+          <div class="fw-bold fs-5 text-primary">
+            {{ "{:,.2f}".format(q.net_payable or 0) }}
+          </div>
+        </div>
+
+        <hr>
+
+        <!-- Deposit Section -->
+        <div class="summary-row">
+          <div>มัดจำ (รวมจากรายการ)</div>
+          <div class="fw-semibold text-info">
+            {{ "{:,.2f}".format(q.deposit_lines_total or 0) }}
+          </div>
+        </div>
+
+        <div class="summary-row">
+          <div>มัดจำเพิ่ม (ทั้งใบ)</div>
+          <div class="fw-semibold text-info">
+            {{ "{:,.2f}".format(q.deposit_extra or 0) }}
+          </div>
+        </div>
+
+        <div class="summary-row big">
+          <div>มัดจำรวมทั้งหมด</div>
+          <div class="fw-bold text-info">
+            {{ "{:,.2f}".format(q.deposit_total or 0) }}
+          </div>
+        </div>
+
+        <div class="mt-3 small text-secondary">
+          * มัดจำเป็นยอดแยก ไม่รวมยอดชำระสุทธิ
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

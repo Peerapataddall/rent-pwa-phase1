@@ -1,0 +1,56 @@
+:root{
+  --app-blue:#1e88e5;
+  --app-blue-2:#e8f2ff;
+}
+
+*{ font-family: "Prompt", system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+
+.app-bg{
+  background: linear-gradient(180deg, var(--app-blue-2) 0%, #ffffff 45%, #f7fbff 100%);
+  min-height: 100vh;
+}
+
+.app-nav{
+  background: linear-gradient(90deg, #0d47a1 0%, #1976d2 60%, #1e88e5 100%);
+}
+
+.app-logo{
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,.15);
+  border: 1px solid rgba(255,255,255,.25);
+}
+
+.app-card{
+  border-radius: 18px;
+  border: 1px solid rgba(13, 71, 161, .12);
+}
+
+.table td, .table th { vertical-align: middle; }
+
+.sticky-summary{
+  position: sticky;
+  top: 14px;
+}
+
+.summary-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding: 6px 0;
+}
+
+.summary-row.big{
+  padding-top: 10px;
+  padding-bottom: 10px;
+  font-size: 1.05rem;
+}
+
+@media (max-width: 1199.98px){
+  .sticky-summary{ position: static; }
+}

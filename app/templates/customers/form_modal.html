@@ -1,0 +1,60 @@
+<div class="modal fade" id="modalCustomer" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-person-plus me-2"></i>เพิ่มลูกค้า</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+
+        <!-- ✅ กลับหน้าเดิมหลังบันทึก (ใช้ใน customers/list และ customers/view) -->
+        <input type="hidden" id="c_next" value="">
+
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">รหัสลูกค้า</label>
+            <input class="form-control" id="c_code">
+          </div>
+          <div class="col-md-8">
+            <label class="form-label">ชื่อลูกค้า/บริษัท *</label>
+            <input class="form-control" id="c_name" required>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">เลขผู้เสียภาษี</label>
+            <input class="form-control" id="c_tax">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">โทร</label>
+            <input class="form-control" id="c_phone">
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">อีเมล</label>
+            <input class="form-control" id="c_email" placeholder="example@email.com">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">เครดิตเทอม (วัน)</label>
+            <input class="form-control text-end" id="c_credit_days" value="0">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">วงเงินเครดิต</label>
+            <input class="form-control text-end" id="c_credit_limit" value="0">
+          </div>
+
+          <div class="col-12">
+            <label class="form-label">ที่อยู่</label>
+            <textarea class="form-control" id="c_addr" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="text-danger small mt-2" id="c_err"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+        <button class="btn btn-primary" type="button" onclick="saveCustomer()">
+          <i class="bi bi-save me-1"></i>บันทึก
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

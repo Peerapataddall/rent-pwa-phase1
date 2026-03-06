@@ -1,0 +1,181 @@
+{# app/templates/partials/master_modals.html #}
+
+<!-- ========================================================= -->
+<!-- MASTER MODALS (Supplier / Category / Brand / Unit) -->
+<!-- Reuse pattern: open...Modal(id, targetSelectId) -->
+<!-- ========================================================= -->
+
+<!-- ===================== Supplier ===================== -->
+<div class="modal fade" id="modalSupplier" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-building me-2"></i><span id="sup_title">เพิ่มเจ้าหนี้</span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="sup_id" value="">
+        <input type="hidden" id="sup_target" value="">
+
+        <div class="row g-3">
+          <div class="col-md-8">
+            <label class="form-label">ชื่อเจ้าหนี้ *</label>
+            <input class="form-control" id="sup_name" placeholder="เช่น บริษัท ... / ร้าน ...">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">เบอร์โทร</label>
+            <input class="form-control" id="sup_phone">
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label">เลขผู้เสียภาษี</label>
+            <input class="form-control" id="sup_tax">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">อีเมล</label>
+            <input class="form-control" id="sup_email">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">เครดิต (วัน)</label>
+            <input class="form-control" id="sup_credit_days" value="0">
+          </div>
+
+          <div class="col-md-12">
+            <label class="form-label">ที่อยู่</label>
+            <textarea class="form-control" id="sup_address" rows="2"></textarea>
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label">วงเงินเครดิต</label>
+            <input class="form-control" id="sup_credit_limit" value="0">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">สถานะ</label>
+            <select class="form-select" id="sup_is_active">
+              <option value="1" selected>ใช้งาน</option>
+              <option value="0">ปิดใช้งาน</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="text-danger small mt-3" id="sup_err"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+        <button class="btn btn-primary" onclick="saveSupplier()"><i class="bi bi-save me-1"></i>บันทึก</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== Category ===================== -->
+<div class="modal fade" id="modalCategory" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-tags me-2"></i><span id="cat_title">เพิ่มหมวดหมู่</span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="cat_id" value="">
+        <input type="hidden" id="cat_target" value="">
+
+        <div class="row g-3">
+          <div class="col-4">
+            <label class="form-label">รหัส *</label>
+            <input class="form-control text-uppercase" id="cat_code" placeholder="SPT">
+          </div>
+          <div class="col-8">
+            <label class="form-label">ชื่อหมวด *</label>
+            <input class="form-control" id="cat_name" placeholder="สว่าน / เครื่องมือ ...">
+          </div>
+          <div class="col-12">
+            <label class="form-label">สถานะ</label>
+            <select class="form-select" id="cat_is_active">
+              <option value="1" selected>ใช้งาน</option>
+              <option value="0">ปิดใช้งาน</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="text-danger small mt-3" id="cat_err"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+        <button class="btn btn-primary" onclick="saveCategory()"><i class="bi bi-save me-1"></i>บันทึก</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== Brand ===================== -->
+<div class="modal fade" id="modalBrand" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-badge-tm me-2"></i><span id="brand_title">เพิ่มยี่ห้อ</span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="brand_id" value="">
+        <input type="hidden" id="brand_target" value="">
+
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label">ชื่อยี่ห้อ *</label>
+            <input class="form-control" id="brand_name" placeholder="Makita / Bosch / ...">
+          </div>
+          <div class="col-12">
+            <label class="form-label">สถานะ</label>
+            <select class="form-select" id="brand_is_active">
+              <option value="1" selected>ใช้งาน</option>
+              <option value="0">ปิดใช้งาน</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="text-danger small mt-3" id="brand_err"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+        <button class="btn btn-primary" onclick="saveBrand()"><i class="bi bi-save me-1"></i>บันทึก</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== Unit ===================== -->
+<div class="modal fade" id="modalUnit" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-rulers me-2"></i><span id="unit_title">เพิ่มหน่วย</span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="unit_id" value="">
+        <input type="hidden" id="unit_target" value="">
+
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label">ชื่อหน่วย *</label>
+            <input class="form-control" id="unit_name" placeholder="ชิ้น / เครื่อง / set ...">
+          </div>
+          <div class="col-12">
+            <label class="form-label">สถานะ</label>
+            <select class="form-select" id="unit_is_active">
+              <option value="1" selected>ใช้งาน</option>
+              <option value="0">ปิดใช้งาน</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="text-danger small mt-3" id="unit_err"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+        <button class="btn btn-primary" onclick="saveUnit()"><i class="bi bi-save me-1"></i>บันทึก</button>
+      </div>
+    </div>
+  </div>
+</div>
