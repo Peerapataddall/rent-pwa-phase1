@@ -7,3 +7,7 @@ instance/
 .DS_Store
 .vscode/
 node_modules/
+
+app/static/uploads/
+app/static/app.zip
+app/templates/purchase/grn.zip
